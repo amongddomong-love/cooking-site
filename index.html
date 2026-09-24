@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>오늘 뭐 먹지 · 집밥 레시피</title>
+  <meta name="description" content="검색·분류·인분 조절·조리 타이머가 있는 집밥 레시피 모음">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🍳</text></svg>">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="site-header">
+    <div class="wrap header-row">
+      <a class="brand" href="#">🍳 <span>오늘 뭐 먹지</span></a>
+      <div class="header-actions">
+        <button id="randomBtn" class="ghost" title="아무거나 골라줘">🎲 랜덤 추천</button>
+        <button id="themeBtn" class="ghost icon" aria-label="다크 모드 전환">🌙</button>
+      </div>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <section class="hero">
+      <h1>냉장고를 열었다면,<br>레시피를 찾아보세요.</h1>
+      <p>재료 이름이나 요리 이름으로 검색할 수 있어요.</p>
+      <input id="search" type="search" placeholder="예: 김치, 달걀, 볶음밥" autocomplete="off">
+    </section>
+
+    <nav id="chips" class="chips" aria-label="카테고리"></nav>
+    <p id="count" class="count"></p>
+    <section id="grid" class="grid"></section>
+    <p id="empty" class="empty" hidden>찾는 레시피가 없어요. 다른 재료로 검색해 보세요.</p>
+  </main>
+
+  <dialog id="detail" class="detail">
+    <article id="detailBody"></article>
+  </dialog>
+
+  <footer class="site-footer wrap">집밥 레시피 모음 · 즐겨찾기는 이 브라우저에만 저장됩니다.</footer>
+
+  <script src="recipes.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
