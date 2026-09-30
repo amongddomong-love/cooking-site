@@ -6,14 +6,18 @@
   <title>오늘 뭐 먹지 · 집밥 레시피</title>
   <meta name="description" content="검색·분류·인분 조절·조리 타이머가 있는 집밥 레시피 모음">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🍳</text></svg>">
-  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="style.css?v=20260930">
 </head>
 <body>
   <header class="site-header">
     <div class="wrap header-row">
       <a class="brand" href="#">🍳 <span>오늘 뭐 먹지</span></a>
+      <nav class="site-switch" aria-label="사이트 섹션">
+        <a href="./" aria-current="page">🍳<span> 요리</span></a>
+        <a href="english/">🗣<span> 영어</span></a>
+      </nav>
       <div class="header-actions">
-        <button id="randomBtn" class="ghost" title="아무거나 골라줘">🎲 랜덤 추천</button>
+        <button id="randomBtn" class="ghost" title="아무거나 골라줘">🎲<span class="label"> 랜덤 추천</span></button>
         <button id="themeBtn" class="ghost icon" aria-label="다크 모드 전환">🌙</button>
       </div>
     </div>

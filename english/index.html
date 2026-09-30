@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="ko" class="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Business English Coach · 업무영어</title>
+  <meta name="description" content="금융·은행·ALM 실무자를 위한 업무영어 회화 학습관리 — Lesson, Shadowing, 간격 복습, Role Play">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🗣</text></svg>">
+  <link rel="stylesheet" href="../style.css?v=20260930">
+  <link rel="stylesheet" href="english.css?v=20260930">
+</head>
+<body>
+  <header class="site-header">
+    <div class="wrap header-row">
+      <a class="brand" href="#home">🗣 <span>English Coach</span></a>
+      <nav class="site-switch" aria-label="사이트 섹션">
+        <a href="../">🍳<span> 요리</span></a>
+        <a href="./" aria-current="page">🗣<span> 영어</span></a>
+      </nav>
+      <div class="header-actions">
+        <button id="settingsBtn" class="ghost icon" aria-label="설정">⚙️</button>
+        <button id="themeBtn" class="ghost icon" aria-label="다크 모드 전환">🌙</button>
+      </div>
+    </div>
+  </header>
+
+  <nav class="tabbar" aria-label="학습 메뉴">
+    <div class="wrap tabbar-row">
+      <a href="#home" data-view="home"><b>🏠</b><span>홈</span></a>
+      <a href="#learn" data-view="learn"><b>📚</b><span>학습</span></a>
+      <a href="#review" data-view="review"><b>🔁</b><span>복습</span><i id="dueBadge" hidden></i></a>
+      <a href="#roleplay" data-view="roleplay"><b>🎭</b><span>롤플레이</span></a>
+      <a href="#stats" data-view="stats"><b>📊</b><span>통계</span></a>
+    </div>
+  </nav>
+
+  <main id="view" class="wrap en-main"></main>
+
+  <dialog id="lessonDlg" class="sheet"><article id="lessonBody"></article></dialog>
+  <dialog id="rpDlg" class="sheet"><article id="rpBody"></article></dialog>
+  <dialog id="settingsDlg" class="sheet narrow"><article id="settingsBody"></article></dialog>
+
+  <div id="toast" class="toast" role="status" hidden></div>
+
+  <footer class="site-footer wrap">Business English Coach · 학습 기록은 이 브라우저에만 저장됩니다(설정 → 백업).</footer>
+
+  <script src="lessons.js?v=20260930b"></script>
+  <script src="audio/manifest.js?v=20260930b"></script>
+  <script src="app.js?v=20260930b"></script>
+</body>
+</html>
