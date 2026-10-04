@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="ko" class="su">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>창업 지도 · 공간 창업</title>
+  <meta name="description" content="경매 상가 물건과 업종별 경쟁·개폐업 추이로 보는 작은 공간 창업">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏪</text></svg>">
+  <link rel="stylesheet" href="../style.css?v=20261004">
+  <link rel="stylesheet" href="startup.css?v=20261004">
+</head>
+<body>
+  <header class="site-header">
+    <div class="wrap header-row">
+      <a class="brand" href="#home">🏪 <span>창업 지도</span></a>
+      <nav class="site-switch" aria-label="사이트 섹션">
+        <a href="../">🍳<span> 요리</span></a>
+        <a href="../english/">🗣<span> 영어</span></a>
+        <a href="./" aria-current="page">🏪<span> 창업</span></a>
+      </nav>
+      <div class="header-actions">
+        <button id="themeBtn" class="ghost icon" aria-label="다크 모드 전환">🌙</button>
+      </div>
+    </div>
+  </header>
+
+  <nav class="su-tabs" aria-label="창업 메뉴">
+    <div class="wrap su-tabs-row">
+      <a href="#home" data-view="home"><b>✨</b><span>추천</span></a>
+      <a href="#items" data-view="items"><b>🏷</b><span>물건</span></a>
+      <a href="#market" data-view="market"><b>📈</b><span>시장</span></a>
+      <a href="#news" data-view="news"><b>📰</b><span>뉴스</span></a>
+    </div>
+  </nav>
+
+  <main class="wrap su-main">
+    <section id="filters" class="su-filters" aria-label="조건"></section>
+    <div id="view"></div>
+  </main>
+
+  <div id="tip" class="viz-tip" hidden></div>
+
+  <footer id="srcFoot" class="site-footer wrap"></footer>
+
+  <script src="app.js?v=20261004"></script>
+</body>
+</html>

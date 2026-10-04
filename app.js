@@ -36,7 +36,7 @@
 
   function matches(r, q) {
     if (!q) return true;
-    const hay = [r.title, r.desc, r.category, ...r.ingredients.map(i => i.name)].join(" ").toLowerCase();
+    const hay = [r.title, r.desc, r.category, r.chef || "", ...r.ingredients.map(i => i.name)].join(" ").toLowerCase();
     return q.toLowerCase().split(/\s+/).every(word => hay.includes(word));
   }
 
@@ -55,7 +55,12 @@
     empty.hidden = list.length > 0;
     grid.innerHTML = list.map(r => `
       <div class="card" role="button" tabindex="0" data-id="${r.id}">
-        <div class="card-thumb" aria-hidden="true">${r.emoji}</div>
+        <div class="card-photo">
+          ${r.img ? `<img src="${r.img}" alt="${escapeHtml(r.title)}" loading="lazy" onerror="this.remove()">` : ""}
+          <span class="emoji-fallback" aria-hidden="true">${r.img ? "" : r.emoji}</span>
+          <span class="cat-badge">${escapeHtml(r.category)}</span>
+          ${r.chef ? `<span class="chef">👨‍🍳 ${escapeHtml(r.chef)}</span>` : ""}
+        </div>
         <div class="card-body">
           <h3>${escapeHtml(r.title)}</h3>
           <p>${escapeHtml(r.desc)}</p>
@@ -84,18 +89,23 @@
 
     const ingHtml = () => r.ingredients.map(i => {
       const amt = i.amount == null ? i.note : formatAmount(i.amount * servings / r.servings) + " " + i.unit;
-      return `<li><span>${escapeHtml(i.name)}</span><span class="amt">${escapeHtml(amt)}</span></li>`;
+      const note = i.amount != null && i.note ? ` <span class="note">(${escapeHtml(i.note)})</span>` : "";
+      const pr = priceOf(i.name);
+      return `<li><span class="nm">${escapeHtml(i.name)}${note}${pr ? `<span class="pr">🛒 ${escapeHtml(pr)}</span>` : ""}</span><span class="amt">${escapeHtml(amt)}</span></li>`;
     }).join("");
 
     detailBody.innerHTML = `
-      <div class="detail-head">
+      <div class="detail-photo">
         <button class="ghost icon close" aria-label="닫기">✕</button>
-        <div class="emoji" aria-hidden="true">${r.emoji}</div>
-        <h2>${escapeHtml(r.title)}</h2>
-        <p>${escapeHtml(r.desc)}</p>
-        <div class="meta" style="margin-top:8px"><span>⏱ ${r.time}분</span><span>📶 ${r.level}</span><span>🏷 ${escapeHtml(r.category)}</span></div>
+        ${r.img ? `<img src="${r.img}" alt="">` : `<span class="emoji-fallback" aria-hidden="true">${r.emoji}</span>`}
+        <div class="cap">
+          <h2>${escapeHtml(r.title)}</h2>
+          <div class="meta"><span>⏱ ${r.time}분</span><span>📶 ${r.level}</span><span>🏷 ${escapeHtml(r.category)}</span></div>
+        </div>
       </div>
       <div class="detail-content">
+        ${r.source ? `<p class="src">👨‍🍳 ${escapeHtml(r.chef || "")} · <a href="${escapeHtml(r.source.url)}" target="_blank" rel="noopener">${escapeHtml(r.source.title)}</a></p>` : ""}
+        <p class="lead">${escapeHtml(r.desc)}</p>
         <h3>재료
           <span class="servings" style="float:right;font-weight:400">
             <button data-s="-1" aria-label="인분 줄이기">−</button>
@@ -104,6 +114,7 @@
           </span>
         </h3>
         <ul class="ing-list" id="ingList">${ingHtml()}</ul>
+        ${r.servingsNote ? `<p class="serv-note">※ ${escapeHtml(r.servingsNote)}</p>` : ""}
         <h3>만드는 법</h3>
         <ol class="steps">
           ${r.steps.map((s, idx) => `
@@ -159,6 +170,95 @@
     };
   }
 
+  // ---------- 장보기 시세 (prices.js) ----------
+  const P = typeof PRICES === "object" ? PRICES : null;
+  const won = n => n == null ? "-" : n.toLocaleString("ko-KR") + "원";
+  function cheapest(name) {
+    const it = P.kca.items[name];
+    if (!it) return null;
+    const list = Object.entries(it.stores).filter(([, v]) => v.p).sort((a, b) => a[1].p - b[1].p);
+    return list.length ? { store: list[0][0], p: list[0][1].p } : null;
+  }
+  function priceOf(ingName) {
+    if (!P || !P.ing[ingName]) return "";
+    const ref = P.ing[ingName][0];
+    if (ref.startsWith("k:")) {
+      const it = P.kamis.items[ref.slice(2)];
+      return it && it.p ? `서울 소매 ${won(it.p)} / ${it.unit}` : "";
+    }
+    const c = cheapest(ref.slice(2));
+    return c ? `${ref.slice(2)} ${won(c.p)} · ${c.store}` : "";
+  }
+  function pct(now, before) {
+    if (!now || !before) return `<span class="z">-</span>`;
+    const v = (now / before - 1) * 100;
+    const cls = Math.abs(v) < 0.05 ? "z" : v > 0 ? "u" : "d";
+    return `<span class="${cls}">${v > 0 ? "▲" : v < 0 ? "▼" : ""}${Math.abs(v).toFixed(1)}%</span>`;
+  }
+  let marketCat = "레시피 재료";
+  function renderMarket() {
+    const box = $("#marketView");
+    if (!P) { box.innerHTML = `<p class="empty">시세 데이터가 없어요.</p>`; return; }
+    const usedK = new Set(Object.values(P.ing).flat().filter(r => r.startsWith("k:")).map(r => r.slice(2)));
+    const usedC = Object.values(P.ing).flat().filter(r => r.startsWith("c:")).map(r => r.slice(2));
+    const q = search.value.trim().toLowerCase();
+    const cats = ["레시피 재료", ...new Set(Object.values(P.kamis.items).map(i => i.cat))];
+    const kItems = Object.entries(P.kamis.items).filter(([k, i]) =>
+      i.p && (marketCat === "레시피 재료" ? usedK.has(k) : i.cat === marketCat) && (!q || k.toLowerCase().includes(q)));
+    const stores = P.kca.stores;
+    const cRows = [...new Set(usedC)].filter(n => P.kca.items[n] && (!q || n.toLowerCase().includes(q)));
+    box.innerHTML = `<div class="mkt">
+      <h2>🏬 ${escapeHtml(P.base.name)} 인근 마트 <small>직선거리 · 가까운 순</small></h2>
+      <div class="marts">${P.marts.map(m => `
+        <a class="mart" href="${escapeHtml(m.url)}" target="_blank" rel="noopener">
+          <div class="top"><b>${escapeHtml(m.name)}</b><span class="km">${m.km.toFixed(2)}km</span></div>
+          <span><i class="type ${m.type === "대형마트" ? "big" : ""}">${escapeHtml(m.type)}</i>${escapeHtml(m.addr)}</span>
+          <span>🕙 ${escapeHtml(m.hours || "영업시간 미확인")} · 휴무 ${escapeHtml(m.closed || "미확인")}</span>
+        </a>`).join("")}</div>
+
+      <h2>🥬 서울 소매 시세 <small>KAMIS · ${escapeHtml(P.kamis.day)} 기준 · 전주·전월·전년 대비</small></h2>
+      <nav class="chips">${cats.map(c => `<button class="chip" data-mcat="${escapeHtml(c)}" aria-pressed="${c === marketCat}">${escapeHtml(c)}</button>`).join("")}</nav>
+      <div class="kgrid">${kItems.map(([k, i]) => `
+        <div class="kitem ${usedK.has(k) ? "used" : ""}">
+          <div class="n">${escapeHtml(i.item)}</div>
+          <div class="k">${escapeHtml(i.kind)}${i.rank && i.rank !== "-" ? " · " + escapeHtml(i.rank) : ""}</div>
+          <div class="p">${won(i.p)} <small>/ ${escapeHtml(i.unit)}</small></div>
+          <div class="chg">주 ${pct(i.p, i.w1)} 월 ${pct(i.p, i.m1)} 년 ${pct(i.p, i.y1)}</div>
+        </div>`).join("") || `<p class="empty">해당 품목이 없어요.</p>`}</div>
+
+      <h2>🏷 가공식품 점포별 가격 <small>한국소비자원 참가격 · ${escapeHtml(P.kca.day)} 조사 · 가장 싼 곳 강조</small></h2>
+      <div class="tbl-wrap"><table class="ptbl">
+        <thead><tr><th>상품</th>${stores.map(s => `<th>${escapeHtml(s)}</th>`).join("")}</tr></thead>
+        <tbody>${cRows.map(n => {
+          const it = P.kca.items[n], best = cheapest(n);
+          return `<tr><td>${escapeHtml(n)}</td>${stores.map(s => {
+            const v = it.stores[s];
+            if (!v || !v.p) return `<td class="z">-</td>`;
+            return `<td class="${best && v.p === best.p ? "best" : ""}">${v.p.toLocaleString("ko-KR")}${v.sale ? `<i class="tag">세일</i>` : ""}${v.opo ? `<i class="tag">1+1</i>` : ""}</td>`;
+          }).join("")}</tr>`;
+        }).join("")}</tbody>
+      </table></div>
+      <p class="srcline">출처: <a href="${escapeHtml(P.kamis.url)}" target="_blank" rel="noopener">${escapeHtml(P.kamis.source)}</a> · <a href="${escapeHtml(P.kca.url)}" target="_blank" rel="noopener">${escapeHtml(P.kca.source)}</a> · 마트 정보는 각 사 점포 안내·카카오맵 · 갱신 ${escapeHtml(P.built)}</p>
+    </div>`;
+  }
+  let mode = "recipes";
+  function setMode(m) {
+    mode = m;
+    document.querySelectorAll(".mode button").forEach(b => b.setAttribute("aria-pressed", b.dataset.mode === m));
+    $("#recipesView").hidden = m !== "recipes";
+    $("#marketView").hidden = m !== "market";
+    search.placeholder = m === "market" ? "예: 대파, 두부, 돼지" : "예: 김치, 달걀, 백종원";
+    if (m === "market") renderMarket();
+  }
+  document.querySelector(".mode").addEventListener("click", e => {
+    const b = e.target.closest("[data-mode]");
+    if (b) { setMode(b.dataset.mode); history.replaceState(null, "", b.dataset.mode === "market" ? "#market" : location.pathname); }
+  });
+  $("#marketView").addEventListener("click", e => {
+    const b = e.target.closest("[data-mcat]");
+    if (b) { marketCat = b.dataset.mcat; renderMarket(); }
+  });
+
   function applyTheme(theme) {
     if (theme) document.documentElement.dataset.theme = theme;
     const dark = theme ? theme === "dark" : matchMedia("(prefers-color-scheme: dark)").matches;
@@ -182,7 +282,7 @@
     const card = e.target.closest(".card");
     if (card && e.target === card && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); openDetail(card.dataset.id); }
   });
-  search.addEventListener("input", renderGrid);
+  search.addEventListener("input", () => mode === "market" ? renderMarket() : renderGrid());
   dialog.addEventListener("close", clearTimers);
   dialog.addEventListener("click", e => { if (e.target === dialog) dialog.close(); });
   $("#randomBtn").onclick = () => openDetail(RECIPES[Math.floor(Math.random() * RECIPES.length)].id);
@@ -197,4 +297,5 @@
   applyTheme(store.get(THEME_KEY, null));
   renderChips();
   renderGrid();
+  if (location.hash === "#market") setMode("market");
 })();

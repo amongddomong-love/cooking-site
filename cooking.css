@@ -1,0 +1,83 @@
+/* 요리 섹션 전용 (공통 style.css 위에 덧씀) — 사진 카드·셰프 출처·장보기 시세 */
+:root { --up: #d64b2a; --down: #2a78d6; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --up: #ff7a5c; --down: #5aa2f0; } }
+:root[data-theme="dark"] { --up: #ff7a5c; --down: #5aa2f0; }
+
+.mode { display: inline-flex; background: color-mix(in srgb, var(--line) 70%, transparent); border-radius: 999px; padding: 3px; gap: 2px; margin: 4px 0 6px; }
+.mode button { border: 0; background: transparent; border-radius: 999px; padding: 7px 16px; font-weight: 700; color: var(--muted); }
+.mode button[aria-pressed="true"] { background: var(--surface); color: var(--accent); box-shadow: var(--shadow); }
+
+/* 사진 카드 */
+.grid { grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 18px; }
+.card { cursor: pointer; }
+.card-photo { position: relative; aspect-ratio: 4 / 3; overflow: hidden; background: var(--accent-soft); }
+.card-photo img { width: 100%; height: 100%; object-fit: cover; display: block; transition: transform .5s ease; }
+.card:hover .card-photo img { transform: scale(1.06); }
+.card-photo::after { content: ""; position: absolute; inset: 55% 0 0; background: linear-gradient(transparent, rgba(0,0,0,.55)); }
+.card-photo .emoji-fallback { position: absolute; inset: 0; display: grid; place-items: center; font-size: 64px; }
+.chef { position: absolute; left: 10px; bottom: 10px; z-index: 1; color: #fff; font-size: .8rem; font-weight: 700; background: rgba(0,0,0,.35); backdrop-filter: blur(4px); border: 1px solid rgba(255,255,255,.35); border-radius: 999px; padding: 2px 10px; }
+.cat-badge { position: absolute; left: 10px; top: 10px; z-index: 1; font-size: .75rem; font-weight: 700; background: var(--surface); color: var(--accent); border-radius: 999px; padding: 2px 9px; }
+.card .fav { z-index: 2; }
+.card h3 { font-size: 1.05rem; line-height: 1.35; }
+
+/* 상세 */
+.detail-photo { position: relative; aspect-ratio: 16 / 9; overflow: hidden; background: var(--accent-soft); }
+.detail-photo img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.detail-photo::after { content: ""; position: absolute; inset: 40% 0 0; background: linear-gradient(transparent, rgba(0,0,0,.7)); }
+.detail-photo .cap { position: absolute; left: 20px; right: 20px; bottom: 16px; z-index: 1; color: #fff; }
+.detail-photo .cap h2 { margin: 0 0 4px; font-size: clamp(1.3rem, 3.6vw, 1.8rem); text-shadow: 0 2px 8px rgba(0,0,0,.4); }
+.detail-photo .cap .meta { color: rgba(255,255,255,.9); }
+.detail-photo .close { z-index: 2; }
+.src { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; font-size: .85rem; color: var(--muted); margin: 0 0 4px; }
+.src a { color: var(--accent); font-weight: 700; text-decoration: none; }
+.lead { margin: 6px 0 0; }
+.ing-list { grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); }
+.ing-list li { align-items: baseline; gap: 8px; }
+.ing-list .nm { flex: 1; }
+.ing-list .pr { display: block; font-size: .74rem; color: var(--muted); font-weight: 400; }
+.ing-list .note { color: var(--muted); font-size: .8rem; }
+.serv-note { font-size: .8rem; color: var(--muted); margin: 6px 0 0; }
+
+/* 장보기 */
+.mkt h2 { font-size: 1.15rem; margin: 22px 0 10px; display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; }
+.mkt h2 small { font-size: .8rem; color: var(--muted); font-weight: 400; }
+.marts { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 10px; }
+.mart { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 12px 14px; box-shadow: var(--shadow); text-decoration: none; color: var(--text); display: flex; flex-direction: column; gap: 3px; }
+.mart:hover { border-color: var(--accent); }
+.mart .top { display: flex; justify-content: space-between; gap: 8px; align-items: baseline; }
+.mart b { font-size: .98rem; }
+.mart .km { color: var(--accent); font-weight: 800; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.mart span { font-size: .8rem; color: var(--muted); }
+.type { font-size: .7rem; font-weight: 700; border: 1px solid var(--line); border-radius: 999px; padding: 0 7px; margin-right: 4px; color: var(--muted); }
+.type.big { border-color: var(--accent); color: var(--accent); }
+.kgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 8px; }
+.kitem { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; }
+.kitem .n { font-weight: 700; font-size: .9rem; }
+.kitem .k { color: var(--muted); font-size: .75rem; }
+.kitem .p { font-size: 1.1rem; font-weight: 800; font-variant-numeric: tabular-nums; margin-top: 2px; }
+.kitem .p small { font-size: .75rem; color: var(--muted); font-weight: 400; }
+.chg { display: flex; gap: 8px; font-size: .74rem; font-variant-numeric: tabular-nums; flex-wrap: wrap; }
+.chg .u { color: var(--up); } .chg .d { color: var(--down); } .chg .z { color: var(--muted); }
+.used { border-color: var(--accent); }
+.used .n::after { content: " · 레시피 재료"; color: var(--accent); font-size: .72rem; font-weight: 700; }
+.tbl-wrap { overflow-x: auto; background: var(--surface); border: 1px solid var(--line); border-radius: 14px; box-shadow: var(--shadow); }
+table.ptbl { width: 100%; border-collapse: collapse; font-size: .84rem; font-variant-numeric: tabular-nums; }
+.ptbl th, .ptbl td { padding: 7px 9px; border-bottom: 1px solid var(--line); text-align: right; white-space: nowrap; }
+.ptbl th { background: var(--bg); color: var(--muted); font-size: .76rem; }
+.ptbl td:first-child, .ptbl th:first-child { text-align: left; white-space: normal; min-width: 170px; position: sticky; left: 0; background: var(--surface); }
+.ptbl th:first-child { background: var(--bg); }
+.ptbl .best { color: var(--accent); font-weight: 800; }
+.ptbl .tag { font-size: .68rem; color: var(--up); margin-left: 3px; }
+.mkt .srcline { font-size: .78rem; color: var(--muted); margin: 6px 0 0; }
+.mkt .srcline a { color: inherit; }
+
+@media (max-width: 560px) {
+  .grid { grid-template-columns: 1fr 1fr; gap: 10px; }
+  .card-body { padding: 10px 12px 12px; }
+  .card p { display: none; }
+  .card h3 { font-size: .95rem; }
+  .meta { gap: 6px; font-size: .75rem; }
+  .chef { font-size: .7rem; padding: 1px 7px; }
+  .cat-badge { display: none; }
+  .kgrid { grid-template-columns: 1fr 1fr; }
+}

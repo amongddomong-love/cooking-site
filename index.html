@@ -3,10 +3,11 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>오늘 뭐 먹지 · 집밥 레시피</title>
-  <meta name="description" content="검색·분류·인분 조절·조리 타이머가 있는 집밥 레시피 모음">
+  <title>오늘 뭐 먹지 · 셰프 레시피</title>
+  <meta name="description" content="유명 셰프 레시피 · 인분 조절 · 조리 타이머 · 송파 인근 마트 장보기 시세">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🍳</text></svg>">
   <link rel="stylesheet" href="style.css?v=20260930">
+  <link rel="stylesheet" href="cooking.css?v=20261004">
 </head>
 <body>
   <header class="site-header">
@@ -15,6 +16,7 @@
       <nav class="site-switch" aria-label="사이트 섹션">
         <a href="./" aria-current="page">🍳<span> 요리</span></a>
         <a href="english/">🗣<span> 영어</span></a>
+        <a href="startup/">🏪<span> 창업</span></a>
       </nav>
       <div class="header-actions">
         <button id="randomBtn" class="ghost" title="아무거나 골라줘">🎲<span class="label"> 랜덤 추천</span></button>
@@ -25,24 +27,34 @@
 
   <main class="wrap">
     <section class="hero">
-      <h1>냉장고를 열었다면,<br>레시피를 찾아보세요.</h1>
-      <p>재료 이름이나 요리 이름으로 검색할 수 있어요.</p>
-      <input id="search" type="search" placeholder="예: 김치, 달걀, 볶음밥" autocomplete="off">
+      <h1>셰프의 레시피로,<br>오늘 저녁을 근사하게.</h1>
+      <p>백종원·류수영 레시피 그대로 · 재료 시세와 가까운 마트까지</p>
+      <input id="search" type="search" placeholder="예: 김치, 달걀, 백종원" autocomplete="off">
     </section>
 
-    <nav id="chips" class="chips" aria-label="카테고리"></nav>
-    <p id="count" class="count"></p>
-    <section id="grid" class="grid"></section>
-    <p id="empty" class="empty" hidden>찾는 레시피가 없어요. 다른 재료로 검색해 보세요.</p>
+    <nav class="mode" aria-label="보기">
+      <button data-mode="recipes" aria-pressed="true">🍽 레시피</button>
+      <button data-mode="market" aria-pressed="false">🛒 장보기 시세</button>
+    </nav>
+
+    <div id="recipesView">
+      <nav id="chips" class="chips" aria-label="카테고리"></nav>
+      <p id="count" class="count"></p>
+      <section id="grid" class="grid"></section>
+      <p id="empty" class="empty" hidden>찾는 레시피가 없어요. 다른 재료로 검색해 보세요.</p>
+    </div>
+
+    <div id="marketView" hidden></div>
   </main>
 
   <dialog id="detail" class="detail">
     <article id="detailBody"></article>
   </dialog>
 
-  <footer class="site-footer wrap">집밥 레시피 모음 · 즐겨찾기는 이 브라우저에만 저장됩니다.</footer>
+  <footer class="site-footer wrap">레시피 출처는 각 레시피에 표시 · 시세: KAMIS·한국소비자원 참가격 · 즐겨찾기는 이 브라우저에만 저장됩니다.</footer>
 
-  <script src="recipes.js"></script>
-  <script src="app.js"></script>
+  <script src="recipes.js?v=20261004"></script>
+  <script src="prices.js?v=20261004"></script>
+  <script src="app.js?v=20261004"></script>
 </body>
 </html>
