@@ -62,6 +62,9 @@ h2.sec small { font-size: .8rem; color: var(--muted); font-weight: 400; }
 .links { display: flex; gap: 6px 12px; font-size: .85rem; flex-wrap: wrap; align-items: baseline; }
 .links a { white-space: nowrap; }
 .links a { color: var(--accent); text-decoration: none; font-weight: 700; }
+.links a.sub { color: var(--muted); font-weight: 400; font-size: .78rem; }
+.copy { font: inherit; font-size: .8rem; font-weight: 700; color: var(--accent); background: var(--accent-soft); border: 0; border-radius: 999px; padding: 3px 10px; cursor: pointer; white-space: nowrap; }
+.copy.sm { font-size: .72rem; font-weight: 400; padding: 1px 8px; margin-left: 4px; vertical-align: 1px; }
 
 /* 표 */
 .tbl-wrap { overflow-x: auto; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); }
@@ -94,6 +97,23 @@ table.tbl { width: 100%; border-collapse: collapse; font-size: .86rem; font-vari
 .viz-tip { position: fixed; z-index: 50; pointer-events: none; background: var(--surface); color: var(--text); border: 1px solid var(--line); border-radius: 10px; padding: 7px 10px; font-size: .8rem; box-shadow: 0 6px 18px rgba(0,0,0,.18); font-variant-numeric: tabular-nums; }
 .viz-tip b { display: block; margin-bottom: 2px; }
 .brands { display: flex; flex-wrap: wrap; gap: 6px; }
+
+/* 수익 */
+.fin-line { display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: .84rem; color: var(--muted); background: var(--bg); border-radius: 10px; padding: 6px 10px; }
+.fin-line b { color: var(--text); font-variant-numeric: tabular-nums; }
+.fin-line .up, .fin-line .down { font-weight: 800; }
+.fin-line .need { color: var(--accent); font-weight: 700; text-decoration: none; }
+.fin-form { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px; align-items: end; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px; box-shadow: var(--shadow); }
+.fin-in { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.fin-in > span:first-child { font-size: .82rem; color: var(--muted); font-weight: 700; }
+.fin-in .box { display: flex; align-items: center; gap: 6px; white-space: nowrap; font-size: .85rem; color: var(--muted); }
+.fin-in input { font: inherit; font-size: .95rem; color: var(--text); background: var(--bg); border: 1px solid var(--line); border-radius: 10px; padding: 6px 8px; width: 100%; min-width: 0; font-variant-numeric: tabular-nums; }
+.fin-in input:placeholder-shown { border-color: var(--accent); }
+.fin-in em { font-style: normal; font-size: .74rem; color: var(--muted); }
+.fin-form [data-fin-reset] { justify-self: start; }
+.fin-note { font-size: .8rem; color: var(--muted); margin: 8px 2px 0; line-height: 1.5; }
+.fin-note.warn { color: var(--s-close); }
+.tiles + .tbl-wrap, .fin-note + .tbl-wrap { margin-top: 12px; }
 
 /* 뉴스 */
 .news { list-style: none; padding: 0; margin: 0; display: grid; gap: 10px; }

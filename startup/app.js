@@ -23,9 +23,19 @@
     gg: { label: "경기", test: x => x.sido === "경기" }
   };
   const BUDGETS = [0, 1e8, 2e8, 3e8, 5e8, 10e8];
+  // 물건 상세: kmrak 상세는 로그인 필요 → 사건번호를 복사해 법원경매정보(로그인 없음)에서 검색
+  const COURT = "https://www.courtauction.go.kr/";
+  // case '2025-293 (9)' = 사건 2025타경293 의 물건번호 9 (괄호는 물건이 여러 개인 사건). 물건번호는 key '#' 뒤
+  const caseNo = x => {
+    const [y, n] = x.case.replace(/\s*\(\d+\)$/, "").split("-"), item = x.key.split("#")[1];
+    return `${x.court} ${y}타경${n}${item && (item !== "1" || /\(\d+\)$/.test(x.case)) ? ` 물건 ${item}` : ""}`;
+  };
+  const TAX = 0.046;   // 상가(주택 외) 유상취득: 취득세 4% + 농어촌특별세 0.2% + 지방교육세 0.4%
 
   let D = null, cdist = [];
   let pref = Object.assign({ concept: "study", region: "near", budget: 0, areas: {} }, store.get(PREF_KEY, {}));
+  // 자금 가정: markup = 최저가 대비 입찰 가산(%), target = 목표 연수익률(%), 나머지는 컨셉별 (만원·%)
+  pref.fin = Object.assign({ markup: 0, target: 8, interior: {}, other: {}, cost: {} }, pref.fin);
   let sortKey = "score", sortDir = -1, shown = 60;
 
   // ---------- 포맷 ----------
@@ -67,6 +77,38 @@
     return D.auction.listings.filter(x => x.bld_py >= lo && x.bld_py <= hi && reg(x) && (!pref.budget || x.min_price <= pref.budget))
       .map(x => ({ ...x, sc: scoreOf(x, cid) }));
   }
+
+  // ---------- 자금·수익 ----------
+  // 예상 매출 = 공정위 가맹점 면적(3.3㎡)당 평균매출 중앙값 × 물건 평수, 소득 = 매출 × (1 − 비용률)
+  function finBase(cid) {
+    const c = D.concepts.find(k => k.id === cid), f = D.ftc.concepts[cid], last = f.series.at(-1);
+    const fee = c.fee_mlsfc && D.fee.by_mlsfc[c.fee_mlsfc];
+    const nts = D.nts.by_code[c.nts];
+    return { c, f, last, nts, feeMan: fee ? Math.round(fee.sum / 10) : null, pyWon: last.py_med ? last.py_med * 1000 : null };
+  }
+  function finIn(cid) {
+    const b = finBase(cid), F = pref.fin;
+    return {
+      interior: F.interior[cid] ?? null,
+      other: F.other[cid] !== undefined ? F.other[cid] : b.feeMan,
+      cost: F.cost[cid] ?? b.nts.simple,
+      markup: F.markup, target: F.target, b
+    };
+  }
+  function finOf(x, cid, I = finIn(cid)) {
+    const bid = x.min_price * (1 + I.markup / 100), tax = bid * TAX;
+    const intr = I.interior == null ? null : I.interior * 1e4 * x.bld_py;
+    const other = (I.other || 0) * 1e4;
+    const total = bid + tax + (intr || 0) + other;
+    const sales = I.b.pyWon == null ? null : I.b.pyWon * x.bld_py;
+    const keep = 1 - I.cost / 100;
+    const income = sales == null ? null : sales * keep;
+    const need = keep > 0 ? I.target / 100 * total / keep : null;     // 목표 수익률에 필요한 연매출
+    return { bid, tax, intr, other, total, sales, income, need, ready: intr != null,
+             roi: income != null && total ? income / total * 100 : null,
+             payback: income > 0 ? total / income : null, ok: sales != null && need != null && sales >= need };
+  }
+  const pct = (v, d = 1) => v == null ? "-" : v.toFixed(d) + "%";
   const median = a => { if (!a.length) return null; const s = [...a].sort((x, y) => x - y), m = s.length >> 1; return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2; };
 
   // ---------- 서울 추이 요약 ----------
@@ -112,6 +154,12 @@
   const save = () => store.set(PREF_KEY, pref);
 
   // ---------- 추천 ----------
+  function finLine(x, cid) {
+    const m = finOf(x, cid);
+    if (!m.ready) return `<div class="fin-line"><span>총 소요자금 ${won(m.total)}+</span><a href="#profit" class="need">인테리어 단가 입력 →</a></div>`;
+    return `<div class="fin-line"><span>총 소요자금 <b>${won(m.total)}</b></span><span>예상 연소득 <b>${won(m.income)}</b></span>
+      <span class="${m.ok ? "up" : "down"}">연 ${pct(m.roi)} ${m.ok ? "✓" : "✗"}</span></div>`;
+  }
   function pickCard(x) {
     const p = x.sc.parts, cid = pref.concept;
     const floorTxt = x.floor == null ? "층 미표기" : (x.floor.startsWith("지") ? "지하 " + x.floor.slice(1) + "층" : x.floor + "층");
@@ -121,6 +169,7 @@
         <div><h4>${esc(x.building || x.dong)} ${esc(x.unit ? x.unit + "호" : "")}</h4><p class="addr">${esc(x.gu)} ${esc(x.dong)}</p></div>
       </div>
       <div class="price"><b>${won(x.min_price)}</b><s>${won(x.appraisal)}</s><span class="tag hot">최저 ${x.min_rate ?? "-"}%</span></div>
+      ${finLine(x, cid)}
       <div class="tags">
         <span class="tag">${x.bld_py}평</span><span class="tag">${floorTxt}</span>
         <span class="tag">${esc(x.status || "")}</span><span class="tag">${x.sale_date.slice(5).replace("-", "/")} ${dday(x.sale_date)}</span>
@@ -131,9 +180,10 @@
         <span><i style="--v:${p.comp}"></i>경쟁</span><span><i style="--v:${p.area}"></i>상권</span>
       </div>
       <div class="links">
-        <a href="${esc(x.src_url)}" target="_blank" rel="noopener">물건 정보 ↗</a>
+        <button class="copy" data-copy="${esc(caseNo(x))}" title="사건번호 복사">📋 ${esc(caseNo(x))}</button>
+        <a href="${COURT}" target="_blank" rel="noopener">법원경매정보 ↗</a>
         <a href="https://map.kakao.com/?q=${encodeURIComponent(x.address.split(/ \d+층| 지\d층|,/)[0])}" target="_blank" rel="noopener">지도 ↗</a>
-        <span class="sub" style="color:var(--muted)">${esc(x.court)} ${esc(x.case)}</span>
+        <a class="sub" href="${esc(x.src_url)}" target="_blank" rel="noopener">kmrak(로그인 필요) ↗</a>
       </div>
     </article>`;
   }
@@ -142,7 +192,7 @@
       const f = fits(c.id).sort((a, b) => b.sc.total - a.sc.total);
       const top = f.slice(0, 5);
       return { c, n: f.length, best: top[0]?.sc.total ?? 0, avg: top.length ? top.reduce((s, x) => s + x.sc.total, 0) / top.length : 0,
-               med: median(f.map(x => x.min_price)), t: trendSum(c.id), st: D.stores.concepts[c.id], list: f };
+               med: median(f.map(x => x.min_price)), t: trendSum(c.id), st: D.stores.concepts[c.id], list: f, fb: finBase(c.id) };
     });
     const rank = [...stats].sort((a, b) => b.avg - a.avg).map(s => s.c.id);
     const cur = stats.find(s => s.c.id === pref.concept);
@@ -158,6 +208,8 @@
             <dt>상위 5 평균 점수</dt><dd>${s.avg ? s.avg.toFixed(0) : "-"}</dd>
             <dt>최저가 중앙값</dt><dd>${won(s.med)}</dd>
             <dt>서울·경기 업소</dt><dd>${num(s.st.seoul + s.st.gyeonggi)}</dd>
+            <dt>가맹 평당 연매출</dt><dd>${won(s.fb.pyWon)}</dd>
+            <dt>추계 소득률</dt><dd>${pct(100 - s.fb.nts.simple)}</dd>
             ${t ? `<dt>서울 점포 1년</dt><dd class="${t.yoy >= 0 ? "up" : "down"}">${t.yoy >= 0 ? "+" : ""}${t.yoy.toFixed(1)}%</dd>
             <dt>최근 4분기 순증</dt><dd class="${t.net4 >= 0 ? "up" : "down"}">${t.net4 >= 0 ? "+" : ""}${num(t.net4)}</dd>` : ""}
           </dl></button>`;
@@ -172,21 +224,24 @@
     ["score", "점수", x => x.sc.total], ["l:name", "물건", null], ["bld_py", "면적(평)", x => x.bld_py],
     ["floor", "층", x => x.floor == null ? -99 : x.floor.startsWith("지") ? -Number(x.floor.slice(1)) : Number(x.floor)],
     ["min_price", "최저가", x => x.min_price], ["min_rate", "최저율", x => x.min_rate], ["min_per_py", "평당 최저가", x => x.min_per_py],
-    ["comp", "같은 동 동종", x => x.dong_seen ? x.comp[pref.concept] : 1e9], ["sale_date", "기일", x => x.sale_date]
+    ["comp", "같은 동 동종", x => x.dong_seen ? x.comp[pref.concept] : 1e9],
+    ["total", "총 소요자금", x => x.fin.total], ["roi", "연수익률", x => x.fin.ready ? x.fin.roi : null], ["sale_date", "기일", x => x.sale_date]
   ];
   function viewItems() {
-    const list = fits(pref.concept);
+    const I = finIn(pref.concept), list = fits(pref.concept).map(x => ({ ...x, fin: finOf(x, pref.concept, I) }));
     const col = COLS.find(c => c[0] === sortKey);
     if (col?.[2]) list.sort((a, b) => ((col[2](a) ?? -1e15) > (col[2](b) ?? -1e15) ? 1 : -1) * sortDir);
     const rows = list.slice(0, shown);
-    return `<h2 class="sec">${esc(D.concepts.find(c => c.id === pref.concept).name)} 조건 물건 <small>${num(list.length)}건 · 머리글을 눌러 정렬</small></h2>
+    return `<h2 class="sec">${esc(D.concepts.find(c => c.id === pref.concept).name)} 조건 물건 <small>${num(list.length)}건 · 머리글을 눌러 정렬${I.interior == null ? ` · 총 소요자금 '+' = 인테리어 미포함 (<a href="#profit">수익 탭</a>에서 입력)` : ""}</small></h2>
       <div class="tbl-wrap"><table class="tbl">
         <thead><tr>${COLS.map(([k, l]) => `<th class="${k.startsWith("l:") ? "l" : ""}" data-sort="${k}" ${k === sortKey ? `aria-sort="${sortDir > 0 ? "ascending" : "descending"}"` : ""}>${l}${k === sortKey ? (sortDir > 0 ? " ▲" : " ▼") : ""}</th>`).join("")}</tr></thead>
         <tbody>${rows.map(x => `<tr>
           <td><b>${x.sc.total}</b></td>
-          <td class="l"><a href="${esc(x.src_url)}" target="_blank" rel="noopener">${esc(x.building || x.dong)} ${esc(x.unit || "")}</a><div class="sub">${esc(x.gu)} ${esc(x.dong)} · ${esc(x.status || "")}</div></td>
+          <td class="l"><b>${esc(x.building || x.dong)} ${esc(x.unit || "")}</b> <button class="copy sm" data-copy="${esc(caseNo(x))}" title="사건번호 복사 (법원경매정보에서 검색)">📋 ${esc(caseNo(x))}</button><div class="sub">${esc(x.gu)} ${esc(x.dong)} · ${esc(x.status || "")}</div></td>
           <td>${x.bld_py}</td><td>${esc(x.floor ?? "-")}</td><td>${won(x.min_price)}</td><td>${x.min_rate ?? "-"}%</td>
-          <td>${won(x.min_per_py)}</td><td>${x.dong_seen ? x.comp[pref.concept] : "-"}</td><td>${x.sale_date.slice(5)} <span class="sub">${dday(x.sale_date)}</span></td>
+          <td>${won(x.min_per_py)}</td><td>${x.dong_seen ? x.comp[pref.concept] : "-"}</td>
+          <td>${won(x.fin.total)}${x.fin.ready ? "" : "+"}</td><td class="${x.fin.ready ? (x.fin.ok ? "up" : "down") : ""}">${x.fin.ready ? pct(x.fin.roi) : "-"}</td>
+          <td>${x.sale_date.slice(5)} <span class="sub">${dday(x.sale_date)}</span></td>
         </tr>`).join("")}</tbody></table></div>
       ${list.length > shown ? `<button class="ghost more" data-more>더 보기 (${num(list.length - shown)}건)</button>` : ""}`;
   }
@@ -254,6 +309,65 @@
       <tbody>${ggTop.map(([g, n]) => `<tr><td class="l">${esc(g)}</td><td>${num(n)}</td></tr>`).join("")}</tbody></table></div>`;
   }
 
+  // ---------- 수익 ----------
+  function viewProfit() {
+    const cid = pref.concept, I = finIn(cid), b = I.b, c = b.c, last = b.last, prev = b.f.series.at(-2);
+    const outRate = last.stores ? (last.end + last.cancel) / last.stores * 100 : null;
+    const list = fits(cid).map(x => ({ ...x, fin: finOf(x, cid, I) }))
+      .sort((p, q) => (q.fin.roi ?? -1) - (p.fin.roi ?? -1) || q.sc.total - p.sc.total);
+    const okN = list.filter(x => x.fin.ready && x.fin.ok).length;
+    const inp = (k, v, unit, label, hint, step = 1) => `<label class="fin-in"><span>${label}</span>
+      <span class="box"><input type="number" data-fin="${k}" step="${step}" min="0" value="${v ?? ""}" placeholder="입력">${unit}</span>
+      <em>${hint}</em></label>`;
+    return `
+      <h2 class="sec">${c.icon} ${esc(c.name)} 자금 가정 <small>입력값은 이 기기에만 저장</small></h2>
+      <div class="fin-form">
+        ${inp("interior", I.interior, "만원/평", "인테리어·설비 단가", "시공 견적 기준으로 입력")}
+        ${inp("other", I.other, "만원", "가맹비·기타 일시비용", b.feeMan != null ? `공정위 ${esc(c.fee_mlsfc)} 가맹 납부금 평균 ${num(b.feeMan)}만원 (${esc(D.fee.yr)})` : "가맹 납부금·장비 등 (업종 평균 없음)")}
+        ${inp("markup", I.markup, "%", "입찰가 (최저가 대비 +)", "0 = 최저가로 낙찰")}
+        ${inp("cost", I.cost, "%", "운영 비용률", `국세청 단순경비율 ${b.nts.simple}% (${esc(D.nts.yr)} 귀속 ${esc(b.nts.code)})`, .1)}
+        ${inp("target", I.target, "%", "목표 연수익률", "총 소요자금 대비")}
+        <button class="ghost" data-fin-reset>↺ 기본값</button>
+      </div>
+      <p class="fin-note">총 소요자금 = 입찰가 + 취득세 등 ${(TAX * 100).toFixed(1)}% + 인테리어·설비(단가×평) + 가맹비·기타 · 예상 연매출 = 가맹점 평당 연매출 중앙값 ${won(b.pyWon)} × 평수 · 소득 = 매출 × (1 − 운영 비용률)</p>
+
+      <h2 class="sec">업종 수익성·경쟁 <small>공정위 가맹정보 ${esc(D.ftc.latest)} · 가맹점 5곳 이상·매출 공개 브랜드 ${last.sales_brands}개 기준</small></h2>
+      <div class="tiles">
+        <div class="tile"><span>가맹점 평균 연매출</span><b>${won(last.sales_med * 1000)}</b><em>브랜드 중앙값</em></div>
+        <div class="tile"><span>평당 연매출</span><b>${won(b.pyWon)}</b><em>가중평균 ${won(last.py_wavg * 1000)}</em></div>
+        <div class="tile"><span>추계 소득률</span><b>${pct(100 - b.nts.simple)}</b><em>1 − 단순경비율</em></div>
+        <div class="tile"><span>가맹점 수</span><b>${num(last.stores)}</b><em class="${prev && last.stores >= prev.stores ? "up" : "down"}">${prev ? `전년 ${last.stores >= prev.stores ? "+" : ""}${num(last.stores - prev.stores)}` : ""}</em></div>
+        <div class="tile"><span>신규 vs 종료·해지</span><b class="${last.new >= last.end + last.cancel ? "up" : "down"}">${num(last.new)} / ${num(last.end + last.cancel)}</b><em>이탈률 ${pct(outRate)}</em></div>
+      </div>
+      ${last.sales_brands < 5 ? `<p class="fin-note warn">매출 공개 브랜드가 ${last.sales_brands}개뿐이라 평균의 대표성이 낮아요.</p>` : ""}
+      <div class="tbl-wrap"><table class="tbl"><thead><tr><th class="l">연도</th><th>브랜드</th><th>가맹점</th><th>신규</th><th>종료·해지</th><th>평균 연매출</th><th>평당 연매출</th></tr></thead>
+      <tbody>${b.f.series.map(r => `<tr><td class="l">${esc(r.yr)}</td><td>${num(r.brands)}</td><td>${num(r.stores)}</td><td>${num(r.new)}</td><td>${num(r.end + r.cancel)}</td>
+        <td>${won(r.sales_med && r.sales_med * 1000)}</td><td>${won(r.py_med && r.py_med * 1000)}</td></tr>`).join("")}</tbody></table></div>
+      <h2 class="sec">주요 브랜드 <small>가맹점 수 상위 · 매출 0 = 미공개</small></h2>
+      <div class="tbl-wrap"><table class="tbl"><thead><tr><th class="l">브랜드</th><th>가맹점</th><th>평균 연매출</th><th>평당 연매출</th><th>신규</th><th>종료·해지</th></tr></thead>
+      <tbody>${b.f.brands.map(r => `<tr><td class="l">${esc(r.n)}</td><td>${num(r.st)}</td><td>${r.sl ? won(r.sl * 1000) : "-"}</td><td>${r.py ? won(r.py * 1000) : "-"}</td><td>${num(r.new)}</td><td>${num(r.out)}</td></tr>`).join("")}</tbody></table></div>
+
+      <h2 class="sec">물건별 수익 추정 <small>${num(list.length)}건 · 연수익률 순${I.interior == null ? " · 인테리어 미입력 (총 소요자금에 미포함)" : ` · 목표 ${pct(I.target, 0)} 달성 ${num(okN)}건`}</small></h2>
+      ${list.length ? `<div class="tbl-wrap"><table class="tbl"><thead><tr><th class="l">물건</th><th>평</th><th>입찰가</th><th>총 소요자금</th><th>예상 연매출</th><th>예상 연소득</th><th>연수익률</th><th>회수</th><th>목표 필요 매출</th></tr></thead>
+      <tbody>${list.slice(0, shown).map(x => { const m = x.fin; return `<tr>
+        <td class="l"><b>${esc(x.building || x.dong)} ${esc(x.unit || "")}</b> <button class="copy sm" data-copy="${esc(caseNo(x))}" title="사건번호 복사 (법원경매정보에서 검색)">📋 ${esc(caseNo(x))}</button><div class="sub">${esc(x.gu)} ${esc(x.dong)} · ${x.floor == null ? "층 미표기" : esc(x.floor) + "층"} · 적합 ${x.sc.total}</div></td>
+        <td>${x.bld_py}</td><td>${won(m.bid)}</td><td>${won(m.total)}${m.ready ? "" : "+"}</td><td>${won(m.sales)}</td><td>${won(m.income)}</td>
+        <td class="${m.ready ? (m.ok ? "up" : "down") : ""}"><b>${m.ready ? pct(m.roi) : "-"}</b></td><td>${m.ready && m.payback ? m.payback.toFixed(1) + "년" : "-"}</td>
+        <td>${m.ready ? won(m.need) + (m.ok ? " ✓" : " ✗") : "-"}</td></tr>`; }).join("")}</tbody></table></div>
+      ${list.length > shown ? `<button class="ghost more" data-more>더 보기 (${num(list.length - shown)}건)</button>` : ""}` : `<p class="empty">조건에 맞는 물건이 없어요.</p>`}
+      <p class="fin-note">추정치이며 입찰 권유가 아니에요. 가맹점 평균은 개인 창업과 다를 수 있고, 단순경비율은 임차료가 포함된 업종 평균이라 자가 상가는 실제 비용률이 더 낮을 수 있어요. 명도·법무·대출이자·권리분석 비용은 빠져 있어요.</p>`;
+  }
+  function onFin(e) {
+    const el = e.target.closest("[data-fin]");
+    if (!el) return false;
+    const k = el.dataset.fin, v = el.value === "" ? null : Number(el.value), cid = pref.concept;
+    if (k === "markup" || k === "target") pref.fin[k] = v ?? 0;
+    else if (v == null && k !== "other") delete pref.fin[k][cid];
+    else pref.fin[k][cid] = v;
+    save(); render();
+    return true;
+  }
+
   // ---------- 뉴스 ----------
   function viewNews() {
     const c = D.concepts.find(k => k.id === pref.concept), list = D.news[c.id] || [];
@@ -262,12 +376,17 @@
   }
 
   // ---------- 라우팅·렌더 ----------
-  const VIEWS = { home: viewHome, items: viewItems, market: viewMarket, news: viewNews };
+  const VIEWS = { home: viewHome, items: viewItems, profit: viewProfit, market: viewMarket, news: viewNews };
   const cur = () => VIEWS[location.hash.slice(1)] ? location.hash.slice(1) : "home";
   function render() {
     const v = cur();
     document.querySelectorAll(".su-tabs a").forEach(a => a.toggleAttribute("aria-current", a.dataset.view === v));
     $("#view").innerHTML = VIEWS[v]();
+  }
+
+  function copyText(t, btn) {
+    const done = ok => { const o = btn.innerHTML; btn.textContent = ok ? "✓ 복사됨 · 법원경매정보에서 검색" : t; setTimeout(() => btn.innerHTML = o, ok ? 1800 : 4000); };
+    try { navigator.clipboard.writeText(t).then(() => done(true), () => done(false)); } catch { done(false); }
   }
 
   // 차트 호버 (크로스헤어 + 툴팁)
@@ -290,7 +409,15 @@
 
   $("#filters").addEventListener("click", onFilter);
   $("#filters").addEventListener("change", onFilterInput);
+  $("#view").addEventListener("change", onFin);
   $("#view").addEventListener("click", e => {
+    const cp = e.target.closest("[data-copy]");
+    if (cp) { copyText(cp.dataset.copy, cp); return; }
+    if (e.target.closest("[data-fin-reset]")) {
+      const cid = pref.concept;
+      ["interior", "other", "cost"].forEach(k => delete pref.fin[k][cid]);
+      pref.fin.markup = 0; pref.fin.target = 8; save(); render(); return;
+    }
     const c = e.target.closest("[data-concept]");
     if (c) { pref.concept = c.dataset.concept; shown = 60; save(); renderFilters(); render(); return; }
     const th = e.target.closest("[data-sort]");
@@ -318,7 +445,7 @@
     .then(d => {
       D = d; cdist = d.cafe_dong_dist;
       if (!RULES[pref.concept]) pref.concept = "study";
-      $("#srcFoot").innerHTML = `경매 ${esc(d.auction.updated)} · 상가업소 ${esc(d.stores.stdrYm)} (${esc(d.stores.source)}) · 서울 개·폐업 ${qLabel(d.trend.quarters.at(-1))} (<a href="${esc(d.trend.source.url)}" target="_blank" rel="noopener">${esc(d.trend.source.name)}</a>) · 갱신 ${esc(d.built)}`;
+      $("#srcFoot").innerHTML = `경매 ${esc(d.auction.updated)} · 상가업소 ${esc(d.stores.stdrYm)} (${esc(d.stores.source)}) · 서울 개·폐업 ${qLabel(d.trend.quarters.at(-1))} (<a href="${esc(d.trend.source.url)}" target="_blank" rel="noopener">${esc(d.trend.source.name)}</a>) · 가맹 매출 ${esc(d.ftc.latest)} (<a href="${esc(d.ftc.source.url)}" target="_blank" rel="noopener">${esc(d.ftc.source.name)}</a>) · 경비율 ${esc(d.nts.yr)} 귀속 (<a href="${esc(d.nts.source.url)}" target="_blank" rel="noopener">${esc(d.nts.source.name)}</a>) · 갱신 ${esc(d.built)}`;
       renderFilters(); render();
     })
     .catch(err => { $("#view").innerHTML = `<p class="empty">데이터를 불러오지 못했어요 (${esc(err.message)}).</p>`; });
