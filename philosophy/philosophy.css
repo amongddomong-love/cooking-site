@@ -24,6 +24,7 @@ h2.sec small { font-size: .8rem; color: var(--muted); font-weight: 400; }
 /* 홈 히어로 */
 .ph-hero { position: relative; overflow: hidden; border-radius: 24px; padding: 34px 28px 28px; color: #f4f7f5;
   background: radial-gradient(60% 80% at 92% 105%, #a8dcc855 0%, transparent 60%), radial-gradient(50% 60% at 8% -10%, #9fbadf55 0%, transparent 70%), linear-gradient(135deg, #24463d, #2f4f6e 70%, #35577a); }
+.ph-hero { background: linear-gradient(135deg, #1d3a33e6 0%, #263f5ccc 55%, #35577a66 100%), url(img/hero.jpg) center 60% / cover, linear-gradient(135deg, #24463d, #2f4f6e 70%, #35577a); }
 .ph-hero::after { content: ""; position: absolute; right: -60px; top: -60px; width: 220px; height: 220px; border-radius: 50%; background: radial-gradient(circle, #ffffff1f, transparent 70%); pointer-events: none; }
 .ph-hero .eyebrow { margin: 0 0 10px; font-size: .82rem; letter-spacing: .08em; color: #bfe3d5; font-weight: 700; }
 .ph-hero blockquote { margin: 0; font-family: var(--serif); font-size: clamp(1.35rem, 3.6vw, 2rem); line-height: 1.55; max-width: 640px; position: relative; z-index: 1; }
@@ -252,3 +253,18 @@ button.seat:hover { transform: translateY(-2px); border-color: var(--accent); }
   .calm-text span { animation: none; opacity: 1; }
   .calm.on .breath i { animation: none; }
 }
+
+/* 그림 (2026-10-05 Kling 일러스트 · img/*.jpg — 파일이 없으면 img 가 지워지고 이모지·배경이 보임) */
+.av { position: relative; overflow: hidden; }
+.av img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.stage .no { position: relative; overflow: hidden; width: 64px; height: 64px; border-radius: 16px; }
+.stage .no img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.stage .no i { position: relative; font-style: normal; }
+.stage .no img + i { display: none; }
+.stage.done .no img + i { display: grid; place-items: center; position: absolute; inset: 0; background: color-mix(in srgb, var(--accent) 70%, transparent); color: #fff; font-size: 1.4rem; }
+.banner { margin: 0 0 14px; border-radius: 20px; overflow: hidden; aspect-ratio: 4 / 3; max-height: 280px; width: 100%; background: var(--ink-soft); }
+.banner.wide { aspect-ratio: 16 / 9; max-height: 260px; }
+.banner img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.banner:not(:has(img)) { display: none; }
+.cs-hero { overflow: hidden; }
+.cs-hero .cs-bg { display: block; width: calc(100% + 44px); margin: -22px -22px 16px; height: clamp(170px, 30vw, 260px); object-fit: cover; }

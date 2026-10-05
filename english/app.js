@@ -7,6 +7,8 @@
   const $ = (s, el = document) => el.querySelector(s);
   const $$ = (s, el = document) => [...el.querySelectorAll(s)];
   const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  // 일러스트 img/<name>.jpg (2026-10-05 Kling) — 파일이 없으면 img 를 지워 이모지·배경이 그대로 보이게
+  const pic = (name, cls = "") => `<img class="${cls}" src="img/${name}.jpg" alt="" loading="lazy" decoding="async" onerror="this.remove()">`;
 
   // localStorage 는 사생활 보호 모드 등에서 실패할 수 있으므로 모두 try/catch.
   const store = {
@@ -186,7 +188,7 @@
     const name = S.settings.name ? `${esc(S.settings.name)}님, ` : "";
     const recent = S.activity.slice(0, 6);
     return `
-      <section class="hello">
+      <section class="hello">${pic("hero", "hello-bg")}
         <p class="eyebrow">Day ${daysBetween(S.settings.startDate, today()) + 1} · ${m}개월차 · Phase ${ph.phase} ${esc(ph.title)}</p>
         <h1>${name}오늘도 20분, 입으로 나오는 영어.</h1>
       </section>
@@ -235,7 +237,7 @@
             const ls = EN_LESSONS.filter(l => l.phase === p.phase), d = ls.filter(l => lessonState(l.id).status === "done").length;
             const state = d === ls.length ? "done" : p === ph ? "now" : m > p.months[1] ? "late" : "next";
             const label = { done: "완료", now: "진행 중", late: "보충 필요", next: "예정" }[state];
-            return `<button class="phase ${state}" data-goto-phase="${p.phase}">
+            return `<button class="phase ${state}" data-goto-phase="${p.phase}">${pic("phase-" + p.phase, "phase-img")}
               <small>${p.months[0]}~${p.months[1]}개월 · ${label}</small>
               <b>Phase ${p.phase}. ${esc(p.title)}</b>
               <span>${esc(p.goal)}</span>
@@ -270,7 +272,7 @@
     const ids = l.sentences.map((_, i) => `${l.id}#${i + 1}`);
     const mastered = ids.filter(id => card(id).status === "MASTERED").length;
     return `<button class="lesson-card ${st}" data-open-lesson="${l.id}">
-      <span class="lc-emoji">${l.emoji}</span>
+      <span class="lc-emoji">${l.emoji}${pic(l.id)}</span>
       <span class="lc-body">
         <small>${CAT[l.category].emoji} ${esc(CAT[l.category].label)} · ${esc(l.level)}</small>
         <b>${esc(l.title)}</b>
@@ -330,7 +332,7 @@
     const ids = l.sentences.map((_, i) => `${l.id}#${i + 1}`);
     let body = "";
     if (step === 0) {
-      body = `<div class="situation"><p class="eyebrow">Situation</p><p class="sit-text">${esc(l.situation)}</p></div>
+      body = `<figure class="sit-pic">${pic(l.id)}</figure><div class="situation"><p class="eyebrow">Situation</p><p class="sit-text">${esc(l.situation)}</p></div>
         <ul class="plan">${STEPS.slice(1).map((s, i) => `<li><b>${i + 1}</b>${s}</li>`).join("")}</ul>
         <p class="fine">핵심 문장 ${ids.length}개 · 예상 ${ids.length * 5 + 5}분</p>`;
     } else if (step === 1) {
@@ -455,7 +457,7 @@
       <div class="lesson-grid">${EN_ROLEPLAYS.map(rp => {
         const hist = S.roleplays.filter(h => h.id === rp.id), best = hist.length ? Math.max(...hist.map(h => h.score)) : null;
         return `<button class="lesson-card" data-open-rp="${rp.id}">
-          <span class="lc-emoji">${rp.emoji}</span>
+          <span class="lc-emoji">${rp.emoji}${pic(rp.id)}</span>
           <span class="lc-body"><small>Phase ${rp.phase} · ${rp.turns.length}턴</small><b>${esc(rp.title)}</b>
             <span class="lc-sit">상대: ${esc(rp.partner)}</span>
             <span class="lc-meta">${best == null ? `<span class="badge">도전 전</span>` : `<span class="badge st-learning">최고 ${best}점</span>`} <small>${hist.length}회</small></span></span>
@@ -506,7 +508,7 @@
           <div class="btn-row">${SR ? `<button class="secondary" data-rp-mic>🎤 말하기</button>` : ""}<button class="primary" data-rp-submit>제출</button></div>`;
     }
     $("#rpBody").innerHTML = `
-      <header class="sheet-head"><button class="ghost icon close" data-close aria-label="닫기">✕</button>
+      <header class="sheet-head">${pic(rp.id, "head-bg")}<button class="ghost icon close" data-close aria-label="닫기">✕</button>
         <p class="eyebrow">Role Play · ${Math.min(turn + 1, rp.turns.length)}/${rp.turns.length}턴 · ${esc(rp.partner)}</p><h2>${rp.emoji} ${esc(rp.title)}</h2></header>
       <div class="sheet-body chat">${bubbles}</div>
       <footer class="sheet-foot column">${foot}</footer>`;

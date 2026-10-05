@@ -103,7 +103,8 @@
     close();
     return html;
   }
-  const av = (id, cls = "") => { const c = C[id]; return `<span class="av ${cls}" style="--h:${c.hue}" aria-hidden="true">${c.emoji}</span>`; };
+  const pic = (name, cls = "") => `<img class="${cls}" src="img/${name}.jpg" alt="" loading="lazy" decoding="async" onerror="this.remove()">`;
+  const av = (id, cls = "") => { const c = C[id]; return `<span class="av ${cls}" style="--h:${c.hue}" aria-hidden="true">${c.emoji}${pic("c-" + id)}</span>`; };
   const nameOf = id => C[id] ? C[id].name : "";
   const kindLabel = c => c.kind === "figure" ? "인물 AI" : "가상 상담사";
   function seatsHTML() {
@@ -247,7 +248,7 @@
       <div class="path">${PATH.map(x => {
         const c = checksOf(x.id), all = c.every(Boolean);
         return `<button class="stage${all ? " done" : ""}" data-go="path/${x.id}">
-          <span class="no">${all ? "✓" : x.emoji}</span>
+          <span class="no">${pic(x.id)}<i>${all ? "✓" : x.emoji}</i></span>
           <span><h3>${x.no}. ${esc(x.title)}</h3><p>${x.verses.map(id => esc(V[id].ref)).join(" · ")}</p>
           <span class="dots">${c.map(b => `<i class="${b ? "on" : ""}"></i>`).join("")}</span></span>
         </button>`;
@@ -270,7 +271,8 @@
 
     schop() {
       return `
-      <h2 class="sec" style="margin-top:6px">🕯 쇼펜하우어와 우파니샤드</h2>
+      <figure class="banner wide">${pic("schop")}</figure>
+      <h2 class="sec">🕯 쇼펜하우어와 우파니샤드</h2>
       <div class="panel">
         <p class="solace">“그것(우프넥하트)은 원전을 빼면 이 세상에서 가능한 가장 보람 있고 가장 마음을 높여 주는 읽을거리다. 그것은 내 삶의 위안이었고, 내 죽음의 위안이 될 것이다.”
           <span class="de">Es ist die belohnendste und erhebendste Lektüre, die (den Urtext ausgenommen) auf der Welt möglich ist: sie ist der Trost meines Lebens gewesen und wird der meines Sterbens sein. — Parerga und Paralipomena II, §185</span></p>
@@ -296,7 +298,7 @@
       const hasTalk = table.log.some(m => m.role === "assistant");
       const groups = [["figure", "철학자·위인"], ["persona", "요즘 상담사"]];
       return `
-      <section class="cs-hero">
+      <section class="cs-hero">${pic("counsel", "cs-bg")}
         <h2>💬 마음 상담 테이블</h2>
         <p>오늘 나와 함께 앉은 세 상담사가 내 이야기를 듣고, 서로 생각도 나눠요. 마음에 와닿는 상담사를 눌러 따로 더 물어볼 수 있어요.</p>
       </section>
@@ -354,6 +356,7 @@
     const chk = n => `<button class="check" data-check="${p.id}:${n}" aria-pressed="${c[n]}">${c[n] ? "✓ 완료" : "완료 표시"}</button>`;
     return `<div class="stage-view">
       <button class="btn sm back" data-go="path">← 여정 목록</button>
+      <figure class="banner">${pic(p.id)}</figure>
       <div class="stage-head"><span class="no">${p.emoji}</span><div><small>${p.no} / ${PATH.length} 단계</small><h2>${esc(p.title)}</h2></div></div>
       <p class="lead">${esc(p.intro)}</p>
       <div class="steps3">
