@@ -292,7 +292,7 @@ const TIMELINE = [
   { y: "1860", t: "프랑크푸르트에서 별세", d: "72세. 그의 철학은 이후 바그너·니체·톨스토이·프로이트·비트겐슈타인으로 이어졌다." }
 ];
 
-// 💬 상담 탭 — 상담사 목록 (상담사는 chartup Netlify 함수 dharma-counsel → Claude, 실패 시 Gemini)
+// 💬 상담 탭 — 상담사 목록 (상담사는 chartup Netlify 함수 dharma-counsel → Claude)
 // id 는 함수 쪽 COUNSELORS 와 같아야 한다(말투·관점 프롬프트는 함수에만 있음). 대화 저장 키도 id → 한번 정하면 바꾸지 않는다.
 // kind: figure = 역사 인물의 생각을 바탕으로 한 AI · persona = 가상 캐릭터 / hue = 아바타 색(0~360)
 const COUNSELORS = [

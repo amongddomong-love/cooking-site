@@ -23,7 +23,7 @@
   // 상담 테이블: 나 + 상담사 3명. {seats: [id×3], log: [{role: user|assistant|note, content, speaker?, to?, target?}]} — 이 브라우저에만
   const TABLE_KEY = "philo.table";
   const OLD_COUNSEL_KEY = "philo.counsel"; // 2026-10-05 1차(상담사 1명) 대화 배열 → 붓다가 앉은 테이블로 옮겨 읽음(원본 키는 그대로 둠)
-  const COUNSEL_API = "https://chartupndown.com/.netlify/functions/dharma-counsel";   // chartup Netlify → Claude, 실패 시 Gemini (키는 서버 환경변수)
+  const COUNSEL_API = "https://chartupndown.com/.netlify/functions/dharma-counsel";   // chartup Netlify → Claude (키는 서버 환경변수)
   const CRISIS = /자살|죽고\s*싶|죽어\s*버리|자해|목숨을|사라지고\s*싶|극단적\s*선택|살기\s*싫/;
   const C = Object.fromEntries(COUNSELORS.map(c => [c.id, c]));
   const pickSeats = (keep = []) => {
@@ -326,7 +326,7 @@
         ${groups.map(([k, label]) => `<h4>${label}</h4><div class="roster-grid">${COUNSELORS.filter(c => c.kind === k).map(c => `
           <div class="rc${table.seats.includes(c.id) ? " on" : ""}">${av(c.id)}<div><b>${esc(c.name)}</b><p>${esc(c.tag)}</p><small>${c.topics.map(esc).join(" · ")}</small></div></div>`).join("")}</div>`).join("")}
       </details>
-      <p class="cs-note">상담사는 모두 AI입니다. 철학자·위인 상담사는 그 인물의 알려진 생각을 바탕으로 AI가 연기하는 것이며 본인의 말이 아니고, 요즘 상담사는 실존하지 않는 가상 인물입니다. 입력한 내용은 답변을 만들기 위해 AI 서비스(Anthropic Claude, 연결이 안 되면 Google Gemini)로 전송되며 서버에 저장하지 않습니다(대화는 이 브라우저에만 저장). 이름·연락처 같은 개인정보는 적지 마세요.<br>
+      <p class="cs-note">상담사는 모두 AI입니다. 철학자·위인 상담사는 그 인물의 알려진 생각을 바탕으로 AI가 연기하는 것이며 본인의 말이 아니고, 요즘 상담사는 실존하지 않는 가상 인물입니다. 입력한 내용은 답변을 만들기 위해 AI 서비스(Anthropic Claude)로 전송되며 서버에 저장하지 않습니다(대화는 이 브라우저에만 저장). 이름·연락처 같은 개인정보는 적지 마세요.<br>
       마음을 살피는 도구일 뿐 전문 상담·치료를 대신하지 않습니다. 힘든 마음이 2주 넘게 이어지면 정신건강의학과나 상담센터를 찾아 주세요.</p>`;
     },
 
