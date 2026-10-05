@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="ko" class="ph">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>우파니샤드 산책</title>
+  <meta name="description" content="쇼펜하우어가 ‘내 삶의 위안’이라 부른 우파니샤드를 한 구절씩 — 듣기·숙고·명상 12단계 여정">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🕉</text></svg>">
+  <link rel="stylesheet" href="../style.css?v=20260930">
+  <link rel="stylesheet" href="philosophy.css?v=20261005">
+</head>
+<body>
+  <header class="site-header">
+    <div class="wrap header-row">
+      <a class="brand" href="#home">🕉 <span>우파니샤드 산책</span></a>
+      <nav class="site-switch" aria-label="사이트 섹션">
+        <a href="../">🍳<span> 요리</span></a>
+        <a href="../english/">🗣<span> 영어</span></a>
+        <a href="../startup/">🏪<span> 창업</span></a>
+        <a href="./" aria-current="page">🕉<span> 철학</span></a>
+      </nav>
+      <div class="header-actions">
+        <button id="themeBtn" class="ghost icon" aria-label="다크 모드 전환">🌙</button>
+      </div>
+    </div>
+  </header>
+
+  <nav class="ph-tabs" aria-label="철학 메뉴">
+    <div class="wrap ph-tabs-row">
+      <a href="#home" data-view="home"><b>🌅</b><span>오늘</span></a>
+      <a href="#path" data-view="path"><b>🧭</b><span>여정</span></a>
+      <a href="#verses" data-view="verses"><b>📜</b><span>구절</span></a>
+      <a href="#schop" data-view="schop"><b>🕯</b><span>쇼펜하우어</span></a>
+      <a href="#notes" data-view="notes"><b>📓</b><span>노트</span></a>
+    </div>
+  </nav>
+
+  <main class="wrap ph-main">
+    <div id="view"></div>
+  </main>
+
+  <dialog id="detail" class="detail ph-detail">
+    <article id="detailBody"></article>
+  </dialog>
+
+  <dialog id="calm" class="calm" aria-label="고요히 읽기">
+    <div class="calm-inner">
+      <button class="calm-x" data-calm="close" aria-label="닫기">✕</button>
+      <p class="calm-ref" id="calmRef"></p>
+      <div class="calm-text" id="calmText"></div>
+      <div class="breath" aria-hidden="true"><i></i></div>
+      <p class="calm-cue" id="calmCue">들이쉬고</p>
+      <div class="calm-bar">
+        <div class="seg" id="calmMins" role="group" aria-label="머무를 시간"></div>
+        <button class="calm-go" id="calmGo" data-calm="toggle">▶ 머무르기</button>
+        <button class="calm-next" data-calm="next" title="다른 구절">↻</button>
+      </div>
+    </div>
+  </dialog>
+
+  <footer class="site-footer wrap">구절은 산스크리트 원문과 공개 영역 번역을 참고한 의역 · 쇼펜하우어 인용은 저작 권·절 표기 · 여정·노트는 이 브라우저에만 저장</footer>
+
+  <script src="texts.js?v=20261005"></script>
+  <script src="app.js?v=20261005"></script>
+</body>
+</html>

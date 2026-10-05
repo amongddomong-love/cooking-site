@@ -3,11 +3,11 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>오늘 뭐 먹지 · 셰프 레시피</title>
-  <meta name="description" content="유명 셰프 레시피 · 인분 조절 · 조리 타이머 · 송파 인근 마트 장보기 시세">
+  <title>오늘 뭐 먹지 · 초보 집밥 클래스</title>
+  <meta name="description" content="요리 초보를 위한 집밥 클래스 · 한식 밑반찬·초등 메뉴·야식 · 15단계 기초 미션 · 장보기 시세">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🍳</text></svg>">
   <link rel="stylesheet" href="style.css?v=20260930">
-  <link rel="stylesheet" href="cooking.css?v=20261004">
+  <link rel="stylesheet" href="cooking.css?v=20261005-2">
 </head>
 <body>
   <header class="site-header">
@@ -17,33 +17,52 @@
         <a href="./" aria-current="page">🍳<span> 요리</span></a>
         <a href="english/">🗣<span> 영어</span></a>
         <a href="startup/">🏪<span> 창업</span></a>
+        <a href="philosophy/">🕉<span> 철학</span></a>
       </nav>
       <div class="header-actions">
-        <button id="randomBtn" class="ghost" title="아무거나 골라줘">🎲<span class="label"> 랜덤 추천</span></button>
+        <button id="randomBtn" class="ghost" title="랜덤 추천">🎲<span class="label"> 랜덤</span></button>
         <button id="themeBtn" class="ghost icon" aria-label="다크 모드 전환">🌙</button>
       </div>
     </div>
   </header>
 
+  <section class="hero-x">
+    <div class="wrap hero-grid">
+      <div class="hero-copy">
+        <p class="eyebrow">초보를 위한 집밥 클래스</p>
+        <h1>처음이어도,<br><em>제대로</em> 맛있게.</h1>
+        <label class="search-box">
+          <span aria-hidden="true">🔍</span>
+          <input id="search" type="search" placeholder="김치, 계란, 파스타" autocomplete="off" aria-label="검색">
+        </label>
+        <div class="hero-stats" id="heroStats"></div>
+      </div>
+      <div class="hero-art" aria-hidden="true">
+        <img src="img/bibimbap.jpg" alt="">
+        <img src="img/kimchi-jjigae.jpg" alt="">
+        <img src="img/gyeran-mari.jpg" alt="">
+      </div>
+    </div>
+  </section>
+
   <main class="wrap">
-    <section class="hero">
-      <h1>셰프의 레시피로,<br>오늘 저녁을 근사하게.</h1>
-      <p>백종원·류수영 레시피 그대로 · 재료 시세와 가까운 마트까지</p>
-      <input id="search" type="search" placeholder="예: 김치, 달걀, 백종원" autocomplete="off">
-    </section>
+    <section id="collections" class="collections" aria-label="추천 컬렉션"></section>
 
     <nav class="mode" aria-label="보기">
-      <button data-mode="recipes" aria-pressed="true">🍽 레시피</button>
-      <button data-mode="market" aria-pressed="false">🛒 장보기 시세</button>
+      <button data-mode="recipes" aria-pressed="true">레시피</button>
+      <button data-mode="skills" aria-pressed="false">기초 미션</button>
+      <button data-mode="market" aria-pressed="false">장보기</button>
     </nav>
 
     <div id="recipesView">
+      <nav id="cuisines" class="cuisines" aria-label="메뉴 분류"></nav>
       <nav id="chips" class="chips" aria-label="카테고리"></nav>
       <p id="count" class="count"></p>
       <section id="grid" class="grid"></section>
-      <p id="empty" class="empty" hidden>찾는 레시피가 없어요. 다른 재료로 검색해 보세요.</p>
+      <p id="empty" class="empty" hidden>검색 결과 없음</p>
     </div>
 
+    <div id="skillsView" hidden></div>
     <div id="marketView" hidden></div>
   </main>
 
@@ -51,10 +70,11 @@
     <article id="detailBody"></article>
   </dialog>
 
-  <footer class="site-footer wrap">레시피 출처는 각 레시피에 표시 · 시세: KAMIS·한국소비자원 참가격 · 즐겨찾기는 이 브라우저에만 저장됩니다.</footer>
+  <footer class="site-footer wrap">분량은 일반 가정식 기준 · 시세 KAMIS·한국소비자원 참가격 · 즐겨찾기·미션 진행은 이 브라우저에만 저장</footer>
 
-  <script src="recipes.js?v=20261004"></script>
+  <script src="recipes.js?v=20261005-2"></script>
+  <script src="skills.js?v=20261005-2"></script>
   <script src="prices.js?v=20261004"></script>
-  <script src="app.js?v=20261004"></script>
+  <script src="app.js?v=20261005-2"></script>
 </body>
 </html>
