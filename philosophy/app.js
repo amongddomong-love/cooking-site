@@ -20,11 +20,28 @@
   let prog = store.get(PATH_KEY, {});
   let notes = store.get(NOTE_KEY, {});
   let marks = store.get(MARK_KEY, []);
-  const COUNSEL_KEY = "philo.counsel";    // 상담 대화 [{role, content}] — 이 브라우저에만
-  const COUNSEL_API = "https://chartupndown.com/.netlify/functions/dharma-counsel";   // chartup Netlify → Gemini (키는 서버 환경변수)
+  // 상담 테이블: 나 + 상담사 3명. {seats: [id×3], log: [{role: user|assistant|note, content, speaker?, to?, target?}]} — 이 브라우저에만
+  const TABLE_KEY = "philo.table";
+  const OLD_COUNSEL_KEY = "philo.counsel"; // 2026-10-05 1차(상담사 1명) 대화 배열 → 붓다가 앉은 테이블로 옮겨 읽음(원본 키는 그대로 둠)
+  const COUNSEL_API = "https://chartupndown.com/.netlify/functions/dharma-counsel";   // chartup Netlify → Claude, 실패 시 Gemini (키는 서버 환경변수)
   const CRISIS = /자살|죽고\s*싶|죽어\s*버리|자해|목숨을|사라지고\s*싶|극단적\s*선택|살기\s*싫/;
-  let chat = store.get(COUNSEL_KEY, []);
-  let busy = false, chatErr = "", lastSend = 0;
+  const C = Object.fromEntries(COUNSELORS.map(c => [c.id, c]));
+  const pickSeats = (keep = []) => {
+    const pool = COUNSELORS.map(c => c.id).filter(id => !keep.includes(id));
+    for (let i = pool.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [pool[i], pool[j]] = [pool[j], pool[i]]; }
+    return [...keep, ...pool].slice(0, 3);
+  };
+  let table = (() => {
+    const t = store.get(TABLE_KEY, null);
+    if (t && Array.isArray(t.seats) && t.seats.length === 3 && t.seats.every(id => C[id]) && Array.isArray(t.log)) return t;
+    const old = store.get(OLD_COUNSEL_KEY, []);
+    if (Array.isArray(old) && old.length)
+      return { seats: pickSeats(["buddha"]), log: old.map(m => m.role === "assistant" ? { ...m, speaker: "buddha", to: "me" } : m) };
+    return { seats: pickSeats(), log: [] };
+  })();
+  const saveTable = () => store.set(TABLE_KEY, table);
+  let target = null;                       // 다음 질문을 받을 상담사 id (null = 모두에게)
+  let busy = false, chatErr = "", lastSend = 0, lastReq = null;
   let vf = { q: "", upa: "all", theme: "all", marked: false };
   let mood = null;
 
@@ -86,59 +103,92 @@
     close();
     return html;
   }
+  const av = (id, cls = "") => { const c = C[id]; return `<span class="av ${cls}" style="--h:${c.hue}" aria-hidden="true">${c.emoji}</span>`; };
+  const nameOf = id => C[id] ? C[id].name : "";
+  const kindLabel = c => c.kind === "figure" ? "인물 AI" : "가상 상담사";
+  function seatsHTML() {
+    return `<div class="table-seats" role="group" aria-label="테이블에 앉은 상담사 — 누르면 그 상담사에게 질문">
+      <div class="seat me"><span class="av" aria-hidden="true">🙂</span><b>나</b><small>오늘의 이야기</small></div>
+      ${table.seats.map(id => { const c = C[id]; return `
+      <button class="seat" data-target="${id}" aria-pressed="${target === id}">
+        ${av(id)}<b>${esc(c.name)}</b><small>${esc(c.tag)}</small><i class="kind">${kindLabel(c)}</i>
+      </button>`; }).join("")}
+    </div>`;
+  }
   function chatHTML() {
-    const hello = `<div class="msg bot"><span class="who">🪷 연</span><div class="bubble"><p>어서 오세요. 저는 마음 상담사 ‘연’이에요.</p><p>지금 마음을 무겁게 하는 일을 들려주시면, 붓다가 말한 네 가지 진리 — <b>괴로움(고)·원인(집)·그침(멸)·길(도)</b> — 의 순서로 함께 살펴보고, <b>팔정도</b>에서 오늘 할 수 있는 작은 실천을 찾아 드릴게요.</p></div></div>`;
-    return hello + chat.map(m => m.role === "user"
-      ? `<div class="msg me"><div class="bubble">${esc(m.content)}</div></div>`
-      : `<div class="msg bot"><span class="who">🪷 연</span><div class="bubble">${md(m.content)}</div></div>`).join("")
-      + (busy ? `<div class="msg bot"><span class="who">🪷 연</span><div class="bubble typing">마음을 살피는 중<i>.</i><i>.</i><i>.</i></div></div>` : "")
-      + (chatErr ? `<div class="msg sys"><div class="bubble">${esc(chatErr)} <button class="btn sm" data-chat-retry>다시 보내기</button></div></div>` : "");
+    const log = table.log;
+    const intro = table.seats.map(id => `<div class="msg bot intro">${av(id)}<div class="body"><span class="who">${esc(nameOf(id))}</span><div class="bubble"><p>${esc(C[id].hello)}</p></div></div></div>`).join("");
+    const items = log.map((m, i) => {
+      if (m.role === "user") return `<div class="msg me">${m.target ? `<span class="to">→ ${esc(nameOf(m.target))}에게</span>` : ""}<div class="bubble">${esc(m.content)}</div></div>`;
+      if (m.role === "note") return `<div class="msg note"><span>${esc(m.content)}</span></div>`;
+      const to = m.to === "me" ? "" : C[m.to] ? `<span class="to">→ ${esc(nameOf(m.to))}</span>` : m.to === "all" ? `<span class="to">→ 모두</span>` : "";
+      const lastOf = !log.slice(i + 1).some(x => x.role === "assistant" && x.speaker === m.speaker);
+      return `<div class="msg bot${C[m.to] ? " cross" : ""}">${av(m.speaker)}<div class="body"><span class="who">${esc(nameOf(m.speaker))} ${to}</span><div class="bubble">${md(m.content)}</div>
+        ${lastOf && table.seats.includes(m.speaker) ? `<div class="msg-acts"><button class="link" data-more="${m.speaker}">💡 이 이야기 더 듣기</button><button class="link" data-target="${m.speaker}">✋ ${esc(nameOf(m.speaker))}에게 묻기</button></div>` : ""}</div></div>`;
+    }).join("");
+    const waiting = busy ? `<div class="msg bot">${av(lastReq?.target || table.seats[0])}<div class="body"><span class="who">${lastReq?.mode === "discuss" ? "상담사들이 이야기 나누는 중" : lastReq?.target ? esc(nameOf(lastReq.target)) + " 생각 중" : "세 상담사가 생각을 모으는 중"}</span><div class="bubble typing"><i>●</i><i>●</i><i>●</i></div></div></div>` : "";
+    const err = chatErr ? `<div class="msg sys"><div class="bubble">${esc(chatErr)} <button class="btn sm" data-chat-retry>다시 보내기</button></div></div>` : "";
+    return intro + items + waiting + err;
   }
   function paintChat() {
     const log = $("#chatLog");
     if (!log) return;
     log.innerHTML = chatHTML();
     const b = $("#chatSend"); if (b) b.disabled = busy;
-    const cr = $("#crisis"); if (cr) cr.hidden = !chat.some(m => m.role === "user" && CRISIS.test(m.content));
+    const cr = $("#crisis"); if (cr) cr.hidden = !table.log.some(m => m.role === "user" && CRISIS.test(m.content));
     log.lastElementChild?.scrollIntoView({ block: "nearest", behavior: "smooth" });
   }
-  async function askCounsel() {
+  async function askCounsel(mode, tgt) {
+    lastReq = { mode, target: tgt || null };
     busy = true; chatErr = ""; lastSend = Date.now(); paintChat();
     try {
       const r = await fetch(COUNSEL_API, {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ messages: chat.slice(-16) })
+        body: JSON.stringify({
+          seats: table.seats, mode, target: tgt || undefined,
+          messages: table.log.filter(m => m.role === "user" || m.role === "assistant").slice(-30)
+            .map(m => ({ role: m.role, content: m.content, speaker: m.speaker, to: m.to }))
+        })
       });
       const d = await r.json().catch(() => ({}));
-      if (!r.ok || !d.answer) throw new Error(d.error || `연결 실패 (${r.status})`);
-      chat.push({ role: "assistant", content: d.answer });
-      store.set(COUNSEL_KEY, chat);
+      if (!r.ok || !Array.isArray(d.turns) || !d.turns.length) throw new Error(d.error || `연결 실패 (${r.status})`);
+      d.turns.filter(t => table.seats.includes(t.speaker)).forEach(t => table.log.push({ role: "assistant", speaker: t.speaker, to: t.to, content: t.text }));
+      saveTable();
     } catch (e) {
-      chatErr = /Failed to fetch|NetworkError|Load failed/i.test(e.message) ? "상담사에게 연결하지 못했어요. 인터넷 연결을 확인해 주세요." : e.message;
+      chatErr = /Failed to fetch|NetworkError|Load failed/i.test(e.message) ? "상담사들에게 연결하지 못했어요. 인터넷 연결을 확인해 주세요." : e.message;
     } finally {
       busy = false;
       if (route()[0] === "counsel") {
         const draft = $("#chatIn")?.value || "";
         render();
         if (draft) $("#chatIn").value = draft;
-        $("#chatLog .msg:last-child")?.scrollIntoView({ block: "start", behavior: "smooth" });
+        const firstNew = document.querySelectorAll("#chatLog .msg")[document.querySelectorAll("#chatLog .msg").length - 1];
+        firstNew?.scrollIntoView({ block: "nearest", behavior: "smooth" });
       }
     }
   }
-  function sendCounsel(text) {
+  function sendCounsel(text, tgt = target) {
     text = String(text || "").trim();
     if (busy || text.length < 2) return;
     if (Date.now() - lastSend < 3000) return;
-    chat.push({ role: "user", content: text.slice(0, 3000) });
-    store.set(COUNSEL_KEY, chat);
+    table.log.push({ role: "user", content: text.slice(0, 3000), ...(tgt ? { target: tgt } : {}) });
+    saveTable();
     const inp = $("#chatIn"); if (inp) inp.value = "";
-    document.querySelector(".examples")?.remove();
-    askCounsel();
+    askCounsel(tgt ? "ask" : "round", tgt);
+  }
+  function discussCounsel() {
+    if (busy || !table.log.some(m => m.role === "assistant")) return;
+    if (Date.now() - lastSend < 3000) return;
+    table.log.push({ role: "note", content: "💬 상담사들이 서로의 생각을 나눕니다" });
+    saveTable();
+    askCounsel("discuss");
   }
   function saveCounselToNote() {
     const d = new Date().toLocaleDateString("ko-KR");
-    const txt = chat.map(m => (m.role === "user" ? "🙋 나: " : "🪷 연:\n") + m.content.trim()).join("\n\n");
-    notes.free = ((notes.free || "").trim() ? notes.free.trim() + "\n\n" : "") + `── 마음 상담 (${d}) ──\n${txt}`;
+    const txt = table.log.map(m => m.role === "user" ? `🙋 나${m.target ? ` → ${nameOf(m.target)}` : ""}: ${m.content.trim()}`
+      : m.role === "note" ? m.content
+      : `${C[m.speaker]?.emoji || "💬"} ${nameOf(m.speaker)}${C[m.to] ? ` → ${nameOf(m.to)}` : ""}:\n${m.content.trim()}`).join("\n\n");
+    notes.free = ((notes.free || "").trim() ? notes.free.trim() + "\n\n" : "") + `── 마음 상담 테이블 (${d}) · ${table.seats.map(nameOf).join(" · ")} ──\n${txt}`;
     store.set(NOTE_KEY, notes);
   }
 
@@ -242,27 +292,41 @@
     },
 
     counsel() {
+      const started = table.log.some(m => m.role === "user");
+      const hasTalk = table.log.some(m => m.role === "assistant");
+      const groups = [["figure", "철학자·위인"], ["persona", "요즘 상담사"]];
       return `
-      <h2 class="sec" style="margin-top:6px">🪷 마음 상담 <small>붓다의 사성제·팔정도로 내 괴로움의 원인을 보고, 오늘의 길을 찾습니다</small></h2>
-      <div class="noble">${NOBLE.map(n => `<div class="nb"><span class="nb-k">${n.emoji} ${n.k}<i>${n.h}</i></span><b>${esc(n.t)}</b><p>${esc(n.d)}</p></div>`).join("")}</div>
-      <details class="p8"><summary>🛤 팔정도 여덟 갈래 — 오늘의 말로</summary>
-        <div class="p8-grid">${PATH8.map(x => `<div><b>${x.k}</b> ${esc(x.t)}<p>${esc(x.d)}</p></div>`).join("")}</div>
-      </details>
+      <section class="cs-hero">
+        <h2>💬 마음 상담 테이블</h2>
+        <p>오늘 나와 함께 앉은 세 상담사가 내 이야기를 듣고, 서로 생각도 나눠요. 마음에 와닿는 상담사를 눌러 따로 더 물어볼 수 있어요.</p>
+      </section>
+      ${seatsHTML()}
       <div class="chat" id="chatLog">${chatHTML()}</div>
-      <div class="crisis" id="crisis" ${chat.some(m => m.role === "user" && CRISIS.test(m.content)) ? "" : "hidden"}>
+      <div class="crisis" id="crisis" ${table.log.some(m => m.role === "user" && CRISIS.test(m.content)) ? "" : "hidden"}>
         <b>지금 많이 힘드신가요?</b> 혼자 견디지 않으셔도 돼요. 지금 바로 이야기할 수 있는 곳이 있어요.<br>
         📞 <a href="tel:109">자살예방상담전화 109</a> (24시간) · <a href="tel:15770199">정신건강위기상담 1577-0199</a> · 긴급 시 <a href="tel:112">112</a>·<a href="tel:119">119</a>
       </div>
-      <form class="chat-form" id="chatForm">
-        <textarea id="chatIn" rows="3" maxlength="3000" placeholder="${chat.length ? "이어서 이야기해 주세요" : "요즘 마음을 무겁게 하는 일을 편하게 적어 주세요"}" aria-label="상담 내용"></textarea>
-        <button class="btn primary" id="chatSend" type="submit" ${busy ? "disabled" : ""}>보내기</button>
-      </form>
-      ${chat.length ? "" : `<div class="examples">${COUNSEL_EXAMPLES.map(x => `<button class="chip" data-ex="${esc(x)}">${esc(x)}</button>`).join("")}</div>`}
-      <div class="row-btns">
-        <button class="btn sm" data-chat-reset ${chat.length ? "" : "disabled"}>🌱 새 상담 시작</button>
-        <button class="btn sm" data-chat-save ${chat.some(m => m.role === "assistant") ? "" : "disabled"}>📓 노트에 저장</button>
+      <div class="composer">
+        <div class="aim">
+          ${target ? `<span class="aim-chip">${av(target, "sm")} ${esc(nameOf(target))}에게 질문 <button class="link" data-target-clear aria-label="모두에게로 바꾸기">✕ 모두에게</button></span>`
+                   : `<span class="aim-chip all">👥 세 상담사 모두에게</span>`}
+          <button class="btn sm" data-discuss ${hasTalk && !busy ? "" : "disabled"} title="상담사들끼리 서로의 생각을 나눕니다">💬 서로 의견 나누기</button>
+        </div>
+        <form class="chat-form" id="chatForm">
+          <textarea id="chatIn" rows="3" maxlength="3000" placeholder="${target ? `${esc(nameOf(target))}에게 묻고 싶은 것을 적어 주세요` : started ? "이어서 이야기해 주세요" : "요즘 마음을 무겁게 하는 일을 편하게 적어 주세요"}" aria-label="상담 내용"></textarea>
+          <button class="btn primary" id="chatSend" type="submit" ${busy ? "disabled" : ""}>보내기</button>
+        </form>
       </div>
-      <p class="cs-note">상담사 ‘연’은 Google Gemini AI입니다. 입력한 내용은 답변을 만들기 위해 Gemini로 전송되며 서버에 저장하지 않습니다(대화는 이 브라우저에만 저장). 이름·연락처 같은 개인정보는 적지 마세요.<br>
+      ${started ? "" : `<div class="examples">${COUNSEL_EXAMPLES.map(x => `<button class="chip" data-ex="${esc(x)}">${esc(x)}</button>`).join("")}</div>`}
+      <div class="row-btns">
+        <button class="btn sm" data-chat-reset>🎲 다른 상담사들과 새로 앉기</button>
+        <button class="btn sm" data-chat-save ${hasTalk ? "" : "disabled"}>📓 노트에 저장</button>
+      </div>
+      <details class="roster"><summary>상담사 ${COUNSELORS.length}명 둘러보기 <small>새로 앉을 때 이 중 세 명이 무작위로 함께해요</small></summary>
+        ${groups.map(([k, label]) => `<h4>${label}</h4><div class="roster-grid">${COUNSELORS.filter(c => c.kind === k).map(c => `
+          <div class="rc${table.seats.includes(c.id) ? " on" : ""}">${av(c.id)}<div><b>${esc(c.name)}</b><p>${esc(c.tag)}</p><small>${c.topics.map(esc).join(" · ")}</small></div></div>`).join("")}</div>`).join("")}
+      </details>
+      <p class="cs-note">상담사는 모두 AI입니다. 철학자·위인 상담사는 그 인물의 알려진 생각을 바탕으로 AI가 연기하는 것이며 본인의 말이 아니고, 요즘 상담사는 실존하지 않는 가상 인물입니다. 입력한 내용은 답변을 만들기 위해 AI 서비스(Anthropic Claude, 연결이 안 되면 Google Gemini)로 전송되며 서버에 저장하지 않습니다(대화는 이 브라우저에만 저장). 이름·연락처 같은 개인정보는 적지 마세요.<br>
       마음을 살피는 도구일 뿐 전문 상담·치료를 대신하지 않습니다. 힘든 마음이 2주 넘게 이어지면 정신건강의학과나 상담센터를 찾아 주세요.</p>`;
     },
 
@@ -453,10 +517,19 @@
     if (t.closest("[data-export]")) { exportNotes(); return; }
     const ex = t.closest("[data-ex]");
     if (ex) { sendCounsel(ex.dataset.ex); return; }
-    if (t.closest("[data-chat-retry]")) { if (!busy) askCounsel(); return; }
+    const tg = t.closest("[data-target]");
+    if (tg) {
+      target = target === tg.dataset.target && tg.classList.contains("seat") ? null : tg.dataset.target;
+      render(); $("#chatIn")?.focus(); return;
+    }
+    if (t.closest("[data-target-clear]")) { target = null; render(); $("#chatIn")?.focus(); return; }
+    const mo = t.closest("[data-more]");
+    if (mo) { target = mo.dataset.more; sendCounsel(`${nameOf(target)}님 이야기를 조금 더 자세히 듣고 싶어요.`, target); return; }
+    if (t.closest("[data-discuss]")) { discussCounsel(); return; }
+    if (t.closest("[data-chat-retry]")) { if (!busy && lastReq) askCounsel(lastReq.mode, lastReq.target); return; }
     if (t.closest("[data-chat-reset]")) {
-      if (chat.length && !confirm("지금 대화를 지우고 새로 시작할까요? (노트에 저장한 내용은 남습니다)")) return;
-      chat = []; chatErr = ""; store.set(COUNSEL_KEY, chat); render(); return;
+      if (table.log.length && !confirm("지금 테이블의 대화를 지우고 다른 상담사들과 새로 앉을까요? (노트에 저장한 내용은 남습니다)")) return;
+      table = { seats: pickSeats(), log: [] }; target = null; chatErr = ""; lastReq = null; saveTable(); render(); return;
     }
     if (t.closest("[data-chat-save]")) { saveCounselToNote(); t.closest("[data-chat-save]").textContent = "✓ 노트에 저장됨"; return; }
     // 고요히 읽기 안
