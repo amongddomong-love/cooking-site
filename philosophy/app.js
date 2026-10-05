@@ -20,6 +20,11 @@
   let prog = store.get(PATH_KEY, {});
   let notes = store.get(NOTE_KEY, {});
   let marks = store.get(MARK_KEY, []);
+  const COUNSEL_KEY = "philo.counsel";    // 상담 대화 [{role, content}] — 이 브라우저에만
+  const COUNSEL_API = "https://chartupndown.com/.netlify/functions/dharma-counsel";   // chartup Netlify → Gemini (키는 서버 환경변수)
+  const CRISIS = /자살|죽고\s*싶|죽어\s*버리|자해|목숨을|사라지고\s*싶|극단적\s*선택|살기\s*싫/;
+  let chat = store.get(COUNSEL_KEY, []);
+  let busy = false, chatErr = "", lastSend = 0;
   let vf = { q: "", upa: "all", theme: "all", marked: false };
   let mood = null;
 
@@ -62,6 +67,79 @@
     return `<p class="count" id="vcount">${list.length}개 구절</p>
       <div class="vgrid">${list.map(vcard).join("")}</div>
       ${list.length ? "" : `<p class="empty">맞는 구절이 없습니다</p>`}`;
+  }
+
+  // ---------- 상담 ----------
+  function md(text) {            // 상담 답변용 아주 작은 마크다운: ### · 목록 · **굵게**
+    const inline = t => esc(t).replace(/\*\*(.+?)\*\*/g, "<b>$1</b>");
+    let html = "", list = null;
+    const close = () => { if (list) { html += `</${list}>`; list = null; } };
+    for (const raw of String(text).split("\n")) {
+      const l = raw.trim();
+      let m;
+      if (!l) { close(); continue; }
+      if ((m = l.match(/^#{1,4}\s+(.*)/))) { close(); html += `<h4>${inline(m[1])}</h4>`; }
+      else if ((m = l.match(/^[-*•]\s+(.*)/))) { if (list !== "ul") { close(); html += "<ul>"; list = "ul"; } html += `<li>${inline(m[1])}</li>`; }
+      else if ((m = l.match(/^\d+[.)]\s+(.*)/))) { if (list !== "ol") { close(); html += "<ol>"; list = "ol"; } html += `<li>${inline(m[1])}</li>`; }
+      else { close(); html += `<p>${inline(l)}</p>`; }
+    }
+    close();
+    return html;
+  }
+  function chatHTML() {
+    const hello = `<div class="msg bot"><span class="who">🪷 연</span><div class="bubble"><p>어서 오세요. 저는 마음 상담사 ‘연’이에요.</p><p>지금 마음을 무겁게 하는 일을 들려주시면, 붓다가 말한 네 가지 진리 — <b>괴로움(고)·원인(집)·그침(멸)·길(도)</b> — 의 순서로 함께 살펴보고, <b>팔정도</b>에서 오늘 할 수 있는 작은 실천을 찾아 드릴게요.</p></div></div>`;
+    return hello + chat.map(m => m.role === "user"
+      ? `<div class="msg me"><div class="bubble">${esc(m.content)}</div></div>`
+      : `<div class="msg bot"><span class="who">🪷 연</span><div class="bubble">${md(m.content)}</div></div>`).join("")
+      + (busy ? `<div class="msg bot"><span class="who">🪷 연</span><div class="bubble typing">마음을 살피는 중<i>.</i><i>.</i><i>.</i></div></div>` : "")
+      + (chatErr ? `<div class="msg sys"><div class="bubble">${esc(chatErr)} <button class="btn sm" data-chat-retry>다시 보내기</button></div></div>` : "");
+  }
+  function paintChat() {
+    const log = $("#chatLog");
+    if (!log) return;
+    log.innerHTML = chatHTML();
+    const b = $("#chatSend"); if (b) b.disabled = busy;
+    const cr = $("#crisis"); if (cr) cr.hidden = !chat.some(m => m.role === "user" && CRISIS.test(m.content));
+    log.lastElementChild?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+  }
+  async function askCounsel() {
+    busy = true; chatErr = ""; lastSend = Date.now(); paintChat();
+    try {
+      const r = await fetch(COUNSEL_API, {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ messages: chat.slice(-16) })
+      });
+      const d = await r.json().catch(() => ({}));
+      if (!r.ok || !d.answer) throw new Error(d.error || `연결 실패 (${r.status})`);
+      chat.push({ role: "assistant", content: d.answer });
+      store.set(COUNSEL_KEY, chat);
+    } catch (e) {
+      chatErr = /Failed to fetch|NetworkError|Load failed/i.test(e.message) ? "상담사에게 연결하지 못했어요. 인터넷 연결을 확인해 주세요." : e.message;
+    } finally {
+      busy = false;
+      if (route()[0] === "counsel") {
+        const draft = $("#chatIn")?.value || "";
+        render();
+        if (draft) $("#chatIn").value = draft;
+        $("#chatLog .msg:last-child")?.scrollIntoView({ block: "start", behavior: "smooth" });
+      }
+    }
+  }
+  function sendCounsel(text) {
+    text = String(text || "").trim();
+    if (busy || text.length < 2) return;
+    if (Date.now() - lastSend < 3000) return;
+    chat.push({ role: "user", content: text.slice(0, 3000) });
+    store.set(COUNSEL_KEY, chat);
+    const inp = $("#chatIn"); if (inp) inp.value = "";
+    document.querySelector(".examples")?.remove();
+    askCounsel();
+  }
+  function saveCounselToNote() {
+    const d = new Date().toLocaleDateString("ko-KR");
+    const txt = chat.map(m => (m.role === "user" ? "🙋 나: " : "🪷 연:\n") + m.content.trim()).join("\n\n");
+    notes.free = ((notes.free || "").trim() ? notes.free.trim() + "\n\n" : "") + `── 마음 상담 (${d}) ──\n${txt}`;
+    store.set(NOTE_KEY, notes);
   }
 
   // ---------- 화면 ----------
@@ -161,6 +239,31 @@
 
       <h2 class="sec">🔖 쇼펜하우어가 비춘 구절</h2>
       <div class="vgrid">${VERSES.filter(v => v.schop).map(vcard).join("")}</div>`;
+    },
+
+    counsel() {
+      return `
+      <h2 class="sec" style="margin-top:6px">🪷 마음 상담 <small>붓다의 사성제·팔정도로 내 괴로움의 원인을 보고, 오늘의 길을 찾습니다</small></h2>
+      <div class="noble">${NOBLE.map(n => `<div class="nb"><span class="nb-k">${n.emoji} ${n.k}<i>${n.h}</i></span><b>${esc(n.t)}</b><p>${esc(n.d)}</p></div>`).join("")}</div>
+      <details class="p8"><summary>🛤 팔정도 여덟 갈래 — 오늘의 말로</summary>
+        <div class="p8-grid">${PATH8.map(x => `<div><b>${x.k}</b> ${esc(x.t)}<p>${esc(x.d)}</p></div>`).join("")}</div>
+      </details>
+      <div class="chat" id="chatLog">${chatHTML()}</div>
+      <div class="crisis" id="crisis" ${chat.some(m => m.role === "user" && CRISIS.test(m.content)) ? "" : "hidden"}>
+        <b>지금 많이 힘드신가요?</b> 혼자 견디지 않으셔도 돼요. 지금 바로 이야기할 수 있는 곳이 있어요.<br>
+        📞 <a href="tel:109">자살예방상담전화 109</a> (24시간) · <a href="tel:15770199">정신건강위기상담 1577-0199</a> · 긴급 시 <a href="tel:112">112</a>·<a href="tel:119">119</a>
+      </div>
+      <form class="chat-form" id="chatForm">
+        <textarea id="chatIn" rows="3" maxlength="3000" placeholder="${chat.length ? "이어서 이야기해 주세요" : "요즘 마음을 무겁게 하는 일을 편하게 적어 주세요"}" aria-label="상담 내용"></textarea>
+        <button class="btn primary" id="chatSend" type="submit" ${busy ? "disabled" : ""}>보내기</button>
+      </form>
+      ${chat.length ? "" : `<div class="examples">${COUNSEL_EXAMPLES.map(x => `<button class="chip" data-ex="${esc(x)}">${esc(x)}</button>`).join("")}</div>`}
+      <div class="row-btns">
+        <button class="btn sm" data-chat-reset ${chat.length ? "" : "disabled"}>🌱 새 상담 시작</button>
+        <button class="btn sm" data-chat-save ${chat.some(m => m.role === "assistant") ? "" : "disabled"}>📓 노트에 저장</button>
+      </div>
+      <p class="cs-note">상담사 ‘연’은 Google Gemini AI입니다. 입력한 내용은 답변을 만들기 위해 Gemini로 전송되며 서버에 저장하지 않습니다(대화는 이 브라우저에만 저장). 이름·연락처 같은 개인정보는 적지 마세요.<br>
+      마음을 살피는 도구일 뿐 전문 상담·치료를 대신하지 않습니다. 힘든 마음이 2주 넘게 이어지면 정신건강의학과나 상담센터를 찾아 주세요.</p>`;
     },
 
     notes() {
@@ -348,6 +451,14 @@
     const ck = t.closest("[data-check]");
     if (ck) { const [id, n] = ck.dataset.check.split(":"); setCheck(id, +n, !checksOf(id)[+n]); render(); return; }
     if (t.closest("[data-export]")) { exportNotes(); return; }
+    const ex = t.closest("[data-ex]");
+    if (ex) { sendCounsel(ex.dataset.ex); return; }
+    if (t.closest("[data-chat-retry]")) { if (!busy) askCounsel(); return; }
+    if (t.closest("[data-chat-reset]")) {
+      if (chat.length && !confirm("지금 대화를 지우고 새로 시작할까요? (노트에 저장한 내용은 남습니다)")) return;
+      chat = []; chatErr = ""; store.set(COUNSEL_KEY, chat); render(); return;
+    }
+    if (t.closest("[data-chat-save]")) { saveCounselToNote(); t.closest("[data-chat-save]").textContent = "✓ 노트에 저장됨"; return; }
     // 고요히 읽기 안
     const mi = t.closest("[data-mins]");
     if (mi) { calm.mins = +mi.dataset.mins; calmStop(); calmPaint(); return; }
@@ -363,6 +474,13 @@
         calmStop(); calmPaint();
       }
     }
+  });
+  document.addEventListener("submit", e => {
+    if (e.target.id !== "chatForm") return;
+    e.preventDefault(); sendCounsel($("#chatIn").value);
+  });
+  document.addEventListener("keydown", e => {
+    if (e.target.id === "chatIn" && e.key === "Enter" && !e.shiftKey && !e.isComposing) { e.preventDefault(); sendCounsel(e.target.value); }
   });
   $("#detail").addEventListener("click", e => { if (e.target === $("#detail")) $("#detail").close(); });
   $("#calm").addEventListener("close", calmStop);
