@@ -105,8 +105,12 @@ button { font: inherit; color: inherit; cursor: pointer; }
 
 @media (max-width: 560px) {
   .brand span, .site-switch span, .ghost .label { display: none; }
-  .site-switch a { padding: 5px 12px; font-size: 1.05rem; }
+  .site-switch a { padding: 5px 9px; font-size: 1.05rem; }   /* 섹션 5개(골프 추가 2026-10-05) — 375px 에 맞춤 */
   .hero { padding-top: 24px; }
   .ghost:not(.icon) { font-size: .85rem; padding: 6px 10px; }
   .detail-content { padding: 16px; }
+}
+@media (max-width: 380px) {
+  .site-switch a { padding: 5px 6px; }
+  .header-actions { gap: 4px; }
 }

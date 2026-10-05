@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="ko" class="golf">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>AI Golf Coach · 골프</title>
+  <meta name="description" content="라운드·연습 기록과 AI 스윙 분석 — 나만의 골프 코치">
+  <meta name="robots" content="noindex">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⛳</text></svg>">
+  <link rel="stylesheet" href="../style.css?v=20261005">
+  <link rel="stylesheet" href="golf.css?v=20261005">
+</head>
+<body>
+  <header class="site-header">
+    <div class="wrap header-row">
+      <a class="brand" href="#home">⛳ <span>AI Golf Coach</span></a>
+      <nav class="site-switch" aria-label="사이트 섹션">
+        <a href="../">🍳<span> 요리</span></a>
+        <a href="../english/">🗣<span> 영어</span></a>
+        <a href="../startup/">🏪<span> 창업</span></a>
+        <a href="../philosophy/">🕉<span> 철학</span></a>
+        <a href="./" aria-current="page">⛳<span> 골프</span></a>
+      </nav>
+      <div class="header-actions">
+        <button id="lockBtn" class="ghost icon" aria-label="잠그기" title="잠그기" hidden>🔒</button>
+        <button id="themeBtn" class="ghost icon" aria-label="다크 모드 전환">🌙</button>
+      </div>
+    </div>
+  </header>
+
+  <nav class="g-tabs" aria-label="골프 메뉴" hidden>
+    <div class="wrap g-tabs-row">
+      <a href="#home" data-view="home"><b>🏠</b><span>홈</span></a>
+      <a href="#rounds" data-view="rounds"><b>⛳</b><span>라운드</span></a>
+      <a href="#practice" data-view="practice"><b>🏌️</b><span>연습</span></a>
+      <a href="#swing" data-view="swing"><b>🎥</b><span>스윙 분석</span></a>
+      <a href="#history" data-view="history"><b>🗂</b><span>분석 기록</span></a>
+    </div>
+  </nav>
+
+  <main id="view" class="wrap g-main"></main>
+
+  <dialog id="sheet" class="g-sheet"><article id="sheetBody"></article></dialog>
+  <div id="toast" class="g-toast" role="status" hidden></div>
+
+  <footer class="site-footer wrap">기록·사진·스윙 영상은 비밀번호로 잠긴 개인 구글 드라이브에만 저장됩니다 · 스윙 분석은 AI(Anthropic Claude)가 대표 프레임을 보고 만든 참고용 코칭입니다</footer>
+
+  <script src="app.js?v=20261005"></script>
+</body>
+</html>
