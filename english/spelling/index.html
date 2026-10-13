@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="ko" class="sp">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Spelling Bee · 스펠링 연습</title>
+  <meta name="description" content="초등 저학년 주간 영단어 스펠링테스트 준비 — 사진으로 단어를 올리고 카드·퍼즐·받아쓰기·실전 테스트로 연습">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🐝</text></svg>">
+  <link rel="stylesheet" href="../../style.css?v=20261005">
+  <link rel="stylesheet" href="spelling.css?v=20261014">
+</head>
+<body>
+  <header class="site-header">
+    <div class="wrap header-row">
+      <a class="brand" href="#home">🐝 <span>Spelling Bee</span></a>
+      <div class="header-actions">
+        <a class="ghost" href="../">🗣<span class="label"> 업무영어</span></a>
+        <button id="kidBtn" class="ghost" aria-label="아이 바꾸기">👧<span class="label"> 아이</span></button>
+        <button id="themeBtn" class="ghost icon" aria-label="다크 모드 전환">🌙</button>
+      </div>
+    </div>
+  </header>
+
+  <main id="view" class="wrap sp-main"></main>
+
+  <dialog id="dlg" class="sp-sheet"><article id="dlgBody"></article></dialog>
+  <div id="toast" class="toast" role="status" hidden></div>
+  <div id="confetti" aria-hidden="true"></div>
+
+  <footer class="site-footer wrap">Spelling Bee · 사진은 이 기기 안에서만 글자를 읽고 어디에도 올라가지 않아요. 기록은 이 브라우저에만 저장됩니다.</footer>
+
+  <script src="spelling.js?v=20261014"></script>
+</body>
+</html>
